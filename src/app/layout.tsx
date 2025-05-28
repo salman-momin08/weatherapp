@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from '@/context/AuthContext'; // Import AuthProvider
 
 const inter = Inter({
   variable: '--font-sans',
@@ -12,7 +11,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'WeatherEyes',
-  description: 'Real-time weather forecasts, AI scenes, and saved searches.', // Updated Description
+  description: 'Real-time weather forecasts, AI scenes, and saved searches.',
 };
 
 export default function RootLayout({
@@ -23,10 +22,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <AuthProvider> {/* Wrap children with AuthProvider */}
-          {children}
-          <Toaster />
-        </AuthProvider>
+        {children}
+        <Toaster />
       </body>
     </html>
   );

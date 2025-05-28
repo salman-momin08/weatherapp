@@ -1,36 +1,16 @@
 // src/app/api/saved-searches/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSavedSearchesCollection } from '@/lib/mongodb';
-import { adminAuth } from '@/lib/firebaseAdmin'; // For token verification
 import type { WeatherData } from '@/types/weather';
 import type { SavedSearch } from '@/types/savedSearch';
 import { ObjectId } from 'mongodb';
 
-async function verifyToken(req: NextRequest): Promise<string | null> {
-  const authorization = req.headers.get('Authorization');
-  if (authorization?.startsWith('Bearer ')) {
-    const idToken = authorization.split('Bearer ')[1];
-    try {
-      const decodedToken = await adminAuth.verifyIdToken(idToken);
-      return decodedToken.uid;
-    } catch (error) {
-      console.error('Error verifying token:', error);
-      return null;
-    }
-  }
-  return null;
-}
-
-// GET: Fetch saved searches for the authenticated user
+// GET: Fetch saved searches
 export async function GET(request: NextRequest) {
-  const userId = await verifyToken(request);
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const collection = await getSavedSearchesCollection();
-    const savedSearches = await collection.find({ userId }).sort({ createdAt: -1 }).toArray();
+    // Fetch all searches, not filtered by userId anymore
+    const savedSearches = await collection.find({}).sort({ createdAt: -1 }).toArray();
     return NextResponse.json(savedSearches, { status: 200 });
   } catch (error) {
     console.error('Failed to fetch saved searches:', error);
@@ -40,11 +20,6 @@ export async function GET(request: NextRequest) {
 
 // POST: Create a new saved search
 export async function POST(request: NextRequest) {
-  const userId = await verifyToken(request);
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const { weatherData, locationName, latitude, longitude } = (await request.json()) as { 
       weatherData: WeatherData; 
@@ -59,9 +34,9 @@ export async function POST(request: NextRequest) {
     
     const collection = await getSavedSearchesCollection();
     const now = new Date();
-    const newSavedSearch: Omit<SavedSearch, '_id'> = {
-      userId,
-      locationName: locationName || weatherData.current.locationName, // Ensure locationName is present
+    // Removed userId from the newSavedSearch object
+    const newSavedSearch: Omit<SavedSearch, '_id' | 'userId'> = {
+      locationName: locationName || weatherData.current.locationName,
       latitude,
       longitude,
       weatherSnapshot: weatherData,

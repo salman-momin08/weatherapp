@@ -1,7 +1,7 @@
 // src/app/page.tsx
 "use client";
 
-import Link from 'next/link'; // Ensures Link is imported
+import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -11,16 +11,13 @@ import type { WeatherData, AIWeatherScene, ForecastDayData } from '@/types/weath
 import type { SavedSearch } from '@/types/savedSearch';
 import { getRealtimeWeatherData } from '@/app/actions/weatherActions';
 import { generateWeatherScene, type GenerateWeatherSceneInput } from '@/ai/flows/generate-weather-scene';
-import { AuthDisplay } from '@/components/AuthDisplay';
-import { useAuth } from '@/hooks/useAuth';
 import { SavedSearchItem } from '@/components/SavedSearchItem';
-import { Github, Linkedin, Loader2, ShieldAlert, Save, ListChecks } from 'lucide-react';
+import { Github, Linkedin, Loader2, ShieldAlert, Save, ListChecks, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const DEFAULT_LOCATION = "Paris";
 
 export default function WeatherPage() {
-  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
   const [location, setLocation] = useState<string>(DEFAULT_LOCATION);
@@ -40,7 +37,6 @@ export default function WeatherPage() {
   const fetchWeatherAndScene = useCallback(async (loc: string, coords?: {lat: number, lon: number}) => {
     setIsLoading(true);
     setError(null);
-    // setWeatherData(null); // Keep old data while loading new for better UX
     setSelectedForecastDay(null); 
     setCurrentCoords(coords || null);
 
@@ -54,10 +50,6 @@ export default function WeatherPage() {
 
       if (weather.status === 'fulfilled') {
         setWeatherData(weather.value);
-        if (!coords && weather.value.current.locationName.includes("Lat:")) { // If geocoding of typed location returned coords
-            // Try to extract lat/lon from locationName for saving, this is a bit hacky
-            // Ideally, weatherActions would return lat/lon used for the successful fetch
-        }
       } else {
         console.error("Weather fetch error:", weather.reason);
         let errorMessage = "Failed to fetch weather data.";
@@ -86,13 +78,9 @@ export default function WeatherPage() {
   }, [toast]);
 
   const fetchSavedSearches = useCallback(async () => {
-    if (!user) return;
     setIsLoadingSaved(true);
     try {
-      const token = await user.getIdToken();
-      const response = await fetch('/api/saved-searches', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await fetch('/api/saved-searches');
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch saved searches');
@@ -105,20 +93,13 @@ export default function WeatherPage() {
     } finally {
       setIsLoadingSaved(false);
     }
-  }, [user, toast]);
+  }, [toast]);
 
   useEffect(() => {
     fetchWeatherAndScene(DEFAULT_LOCATION);
-  }, [fetchWeatherAndScene]);
+    fetchSavedSearches(); // Fetch saved searches on initial load
+  }, [fetchWeatherAndScene, fetchSavedSearches]);
 
-  useEffect(() => {
-    if (user) {
-      fetchSavedSearches();
-    } else {
-      setSavedSearches([]); // Clear saved searches if user logs out
-      setShowSavedSearches(false);
-    }
-  }, [user, fetchSavedSearches]);
 
   const handleSearch = (searchLocation: string) => {
     setLocation(searchLocation); 
@@ -136,7 +117,7 @@ export default function WeatherPage() {
       (position) => {
         const coords = { lat: position.coords.latitude, lon: position.coords.longitude };
         const locationString = `coords:${coords.lat},${coords.lon}`;
-        setLocation(locationString); // Set location to the coord string for retry logic
+        setLocation(locationString); 
         fetchWeatherAndScene(locationString, coords); 
       },
       (err) => {
@@ -148,37 +129,28 @@ export default function WeatherPage() {
   };
 
   const handleSaveSearch = async () => {
-    if (!user || !weatherData) {
-      toast({ title: "Cannot Save", description: "You must be logged in and have weather data to save.", variant: "destructive" });
+    if (!weatherData) {
+      toast({ title: "Cannot Save", description: "No weather data to save.", variant: "destructive" });
       return;
     }
     setIsSaving(true);
     try {
-      const token = await user.getIdToken();
-      // Determine lat/lon for saving
       let latToSave: number | undefined;
       let lonToSave: number | undefined;
 
-      if (currentCoords) { // From geolocation
+      if (currentCoords) {
         latToSave = currentCoords.lat;
         lonToSave = currentCoords.lon;
-      } else if (weatherData.current.locationName && !weatherData.current.locationName.startsWith("Lat:")) {
-        // Attempt to get lat/lon from weatherData if available and not already a coord string
-        // This part is tricky as OWM responses might not always return precise input lat/lon.
-        // For now, if not geolocated, we might not have precise lat/lon to save.
-        // A better approach would be for weatherActions to consistently return the lat/lon it used.
-        // Let's assume weatherData.current might have it or we skip if not perfectly clear.
-        // For simplicity in this iteration, we'll use the geocoding result's lat/lon IF weatherActions.ts is updated to return it.
-        // Since it's not currently structured that way, we'll prioritize currentCoords.
+      } else if (weatherData.current.locationName && !weatherData.current.locationName.startsWith("Lat:") && !weatherData.current.locationName.startsWith("coords:")) {
+        // This case is for when a location name was typed, and we need to ensure weatherActions returned lat/lon.
+        // For now, we assume weatherData.current will have an interpretable location name.
+        // Ideally, weatherActions should consistently return the resolved lat/lon.
+        // We will rely on locationName from weatherData if not geolocated.
+        // The API requires lat/lon.
+        // Attempt to parse from locationName if it's a coordinate string from a previous reverse geocode
+        // This is a fallback if weatherActions doesn't explicitly return lat/lon.
       }
       
-      // If after checks, lat/lon are still undefined, we might not be able to save accurately.
-      // However, the API /api/saved-searches expects latitude and longitude.
-      // For now, this means saving might be problematic for typed searches if we don't get explicit lat/lon back.
-      // We need `weatherActions` to return the used lat/lon.
-      // Given current structure of `weatherActions`, it doesn't explicitly return the lat/lon it resolved to.
-      // This is a limitation to address. For now, we will attempt to save based on what we have.
-      // Fallback: if weatherData.current.locationName is a coordinate string already, parse from there
       if (latToSave === undefined && weatherData.current.locationName.startsWith("coords:")) {
           const parts = weatherData.current.locationName.substring(7).split(',');
           if (parts.length === 2) {
@@ -193,23 +165,20 @@ export default function WeatherPage() {
           }
       }
       
-      // Final check
       if (latToSave === undefined || lonToSave === undefined) {
-          toast({ title: "Cannot Save", description: "Could not determine precise coordinates for this location to save.", variant: "destructive" });
+          toast({ title: "Cannot Save", description: "Could not determine precise coordinates for this location to save. Ensure the location was found.", variant: "destructive" });
           setIsSaving(false);
           return;
       }
-
 
       const response = await fetch('/api/saved-searches', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ 
             weatherData, 
-            locationName: weatherData.current.locationName, // Use locationName from current weather data
+            locationName: weatherData.current.locationName,
             latitude: latToSave, 
             longitude: lonToSave 
         }),
@@ -219,7 +188,7 @@ export default function WeatherPage() {
         throw new Error(errorData.error || 'Failed to save search');
       }
       toast({ title: "Search Saved!", description: `${weatherData.current.locationName} has been saved.` });
-      fetchSavedSearches(); // Refresh saved searches list
+      fetchSavedSearches(); 
     } catch (err) {
       console.error("Failed to save search:", err);
       toast({ title: "Error Saving", description: (err as Error).message || "Could not save the search.", variant: "destructive" });
@@ -229,12 +198,25 @@ export default function WeatherPage() {
   };
   
   const handleViewSavedSearch = (savedSearch: SavedSearch) => {
-    setLocation(savedSearch.locationName); // Or construct coords string if preferred: `coords:${savedSearch.latitude},${savedSearch.longitude}`
+    setLocation(savedSearch.locationName); 
     setWeatherData(savedSearch.weatherSnapshot);
-    // Optionally, could also try to regenerate AI scene for the loaded location
-    // generateWeatherScene({ location: savedSearch.locationName }... setAiScene(...)
-    // For now, just load the weather data.
-    setShowSavedSearches(false); // Hide the list after loading one
+    setCurrentCoords({lat: savedSearch.latitude, lon: savedSearch.longitude});
+    // Consider regenerating AI scene if needed or use snapshot's (if saved)
+    // For now, just loads weather data.
+    if (savedSearch.weatherSnapshot.current.locationName && !savedSearch.weatherSnapshot.current.locationName.startsWith('coords:')) {
+      generateWeatherScene({ location: savedSearch.weatherSnapshot.current.locationName } as GenerateWeatherSceneInput)
+        .then(sceneData => {
+          if (sceneData.imageUri) {
+            setAiScene({ imageUri: sceneData.imageUri, reliability: sceneData.reliability });
+          } else {
+            setAiScene({ imageUri: null, reliability: sceneData.reliability || 'AI scene generation failed or skipped for saved search.' });
+          }
+        })
+        .catch(err => console.warn("AI Scene generation for saved search failed:", err));
+    } else {
+       setAiScene({ imageUri: null, reliability: 'AI scene generation skipped for coordinate-based saved search.' });
+    }
+    setShowSavedSearches(false); 
     toast({ title: "Loaded Saved Search", description: `Displaying weather for ${savedSearch.locationName}.`});
   };
 
@@ -255,25 +237,34 @@ export default function WeatherPage() {
       <header className="p-4 bg-background/70 backdrop-blur-md shadow-md sticky top-0 z-50">
         <div className="container mx-auto flex justify-between items-center">
           <Link href="/" className="text-3xl font-bold text-primary">WeatherEyes</Link>
-          <AuthDisplay />
+          <div className="flex items-center gap-2">
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                asChild
+                aria-label="Product Manager Accelerator LinkedIn Page"
+              >
+                <a href="https://www.linkedin.com/company/product-manager-accelerator/" className="group" target="_blank" rel="noopener noreferrer">
+                  <Info className="h-6 w-6 text-accent group-hover:text-accent-foreground transition-colors" />
+                </a>
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="flex-grow container mx-auto p-4 md:p-8 flex flex-col items-center">
-        <LocationInput onSearch={handleSearch} onGeolocate={handleGeolocate} isLoading={isLoading || isSaving || authLoading} />
+        <LocationInput onSearch={handleSearch} onGeolocate={handleGeolocate} isLoading={isLoading || isSaving} />
 
-        {user && !authLoading && (
-            <div className="flex gap-2 mb-6">
-                <Button onClick={handleSaveSearch} disabled={isSaving || isLoading || !weatherData} className="min-w-[150px]">
-                    {isSaving ? <Loader2 className="animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save Search</>}
-                </Button>
-                <Button variant="outline" onClick={() => setShowSavedSearches(prev => !prev)} disabled={isLoadingSaved} className="min-w-[180px]">
-                    {isLoadingSaved ? <Loader2 className="animate-spin" /> : <><ListChecks className="mr-2 h-4 w-4" /> {showSavedSearches ? "Hide" : "My Saved Searches"}</>}
-                </Button>
-            </div>
-        )}
+        <div className="flex gap-2 mb-6">
+            <Button onClick={handleSaveSearch} disabled={isSaving || isLoading || !weatherData} className="min-w-[150px]">
+                {isSaving ? <Loader2 className="animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save Search</>}
+            </Button>
+            <Button variant="outline" onClick={() => setShowSavedSearches(prev => !prev)} disabled={isLoadingSaved} className="min-w-[180px]">
+                {isLoadingSaved ? <Loader2 className="animate-spin" /> : <><ListChecks className="mr-2 h-4 w-4" /> {showSavedSearches ? "Hide" : "My Saved Searches"}</>}
+            </Button>
+        </div>
 
-        {showSavedSearches && user && (
+        {showSavedSearches && (
           <Card className="w-full max-w-2xl mb-8 bg-card/80 backdrop-blur-sm shadow-xl">
             <CardHeader>
               <CardTitle className="text-2xl text-center">My Saved Searches</CardTitle>
@@ -292,11 +283,10 @@ export default function WeatherPage() {
           </Card>
         )}
 
-
-        {(isLoading || authLoading) && !weatherData && (
+        {isLoading && !weatherData && (
           <div className="flex flex-col items-center justify-center text-center p-10 rounded-lg bg-card/80 backdrop-blur-sm shadow-xl">
             <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
-            <p className="text-xl font-semibold">{(authLoading && !user) ? "Authenticating..." : "Fetching weather data..."}</p>
+            <p className="text-xl font-semibold">Fetching weather data...</p>
             <p className="text-muted-foreground">Please wait a moment.</p>
           </div>
         )}
@@ -312,7 +302,7 @@ export default function WeatherPage() {
           </div>
         )}
 
-        {!isLoading && !authLoading && weatherData && (
+        {!isLoading && weatherData && (
           <WeatherDisplay 
             weatherData={weatherData} 
             aiScene={aiScene}
@@ -321,11 +311,10 @@ export default function WeatherPage() {
           />
         )}
         
-        {!isLoading && !authLoading && !weatherData && !error && (
+        {!isLoading && !weatherData && !error && (
             <div className="text-center p-10 rounded-lg bg-card/80 backdrop-blur-sm shadow-xl">
                 <p className="text-xl">Welcome to WeatherEyes!</p>
                 <p className="text-muted-foreground">Enter a location to get started or use your current location.</p>
-                {!user && <p className="mt-2 text-sm">Login or Sign up to save your searches!</p>}
             </div>
         )}
       </main>

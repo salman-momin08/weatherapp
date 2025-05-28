@@ -1,14 +1,12 @@
-// src/types/user.ts
-import type { ObjectId } from 'mongodb';
+// This type definition is no longer needed as Firebase user sync to MongoDB is removed.
+// You can delete this file: src/types/user.ts
+
+// console.log("MongoUser type has been removed due to Firebase removal.");
 
 export interface MongoUser {
-  _id?: ObjectId; // MongoDB ObjectID
-  firebaseUid: string; // Firebase User ID (UID)
-  email: string | null;
-  displayName?: string | null;
-  photoURL?: string | null; // If you plan to store this
-  createdAt: Date; // Firebase user creation time
-  // Add any other app-specific user fields here
-  // e.g., preferences: object;
-  // e.g., lastLoginAt: Date;
+  // Define a local user structure if needed for non-Firebase local user management
+  // For example:
+  // localId?: string;
+  // username?: string;
+  // preferences?: object;
 }
