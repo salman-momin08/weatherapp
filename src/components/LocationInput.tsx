@@ -1,3 +1,4 @@
+
 // src/components/LocationInput.tsx
 "use client";
 
@@ -28,7 +29,7 @@ export function LocationInput({ onSearch, onGeolocate, isLoading }: LocationInpu
         type="text"
         value={location}
         onChange={(e) => setLocation(e.target.value)}
-        placeholder="Enter city, ZIP, coordinates, or landmark"
+        placeholder="City, ZIP (e.g., 90210,US), landmark, or coords:lat,lon"
         className="flex-grow text-base"
         disabled={isLoading}
       />
