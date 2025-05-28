@@ -85,14 +85,20 @@ export default function WeatherPage() {
       const responseText = await response.text();
 
       if (!response.ok) {
-        let errorDetails = `Failed to fetch saved searches. Status: ${response.status}`;
+        let descriptiveError = `Failed to fetch saved searches. Status: ${response.status}.`;
         try {
+          // Try to parse as JSON, as our API route *should* return JSON errors
           const errorData = JSON.parse(responseText);
-          errorDetails = errorData.error || errorData.message || errorDetails;
-        } catch (jsonError) {
-          errorDetails = responseText.substring(0, 200) + (responseText.length > 200 ? "..." : "");
+          descriptiveError += ` Server message: ${errorData.error || errorData.message || 'Unknown API error'}`;
+          if (errorData.details) {
+            console.error("Detailed server error for saved searches:", errorData.details);
+          }
+        } catch (jsonParseError) {
+          // If it's not JSON, it's likely an HTML error page (e.g. server crash)
+          descriptiveError += " The server returned an unexpected (non-JSON) response. This might indicate a server-side issue or misconfiguration. Check server logs.";
+          console.error("Received HTML or non-JSON error from /api/saved-searches GET:", responseText.substring(0, 500) + (responseText.length > 500 ? "..." : ""));
         }
-        throw new Error(errorDetails);
+        throw new Error(descriptiveError);
       }
       const data: SavedSearch[] = JSON.parse(responseText);
       setSavedSearches(data);
@@ -177,14 +183,18 @@ export default function WeatherPage() {
 
       const responseText = await response.text();
       if (!response.ok) {
-        let errorDetails = `Failed to save search. Status: ${response.status}`;
+        let descriptiveError = `Failed to save search. Status: ${response.status}.`;
         try {
             const errorData = JSON.parse(responseText);
-            errorDetails = errorData.error || errorData.details || errorData.message || errorDetails;
+            descriptiveError += ` Server message: ${errorData.error || errorData.details || errorData.message || 'Unknown API error'}`;
+             if (errorData.details) {
+                console.error("Detailed server error on save:", errorData.details);
+            }
         } catch (jsonError) {
-            errorDetails = responseText.substring(0, 200) + (responseText.length > 200 ? "..." : "");
+            descriptiveError += " The server returned an unexpected (non-JSON) response. This might indicate a server-side issue or misconfiguration. Check server logs.";
+            console.error("Received HTML or non-JSON error from /api/saved-searches POST:", responseText.substring(0, 500) + (responseText.length > 500 ? "..." : ""));
         }
-        throw new Error(errorDetails);
+        throw new Error(descriptiveError);
       }
       const newSavedSearch: SavedSearch = JSON.parse(responseText);
       toast({ title: "Search Saved!", description: `${newSavedSearch.locationName} has been saved.` });
@@ -202,10 +212,8 @@ export default function WeatherPage() {
     setWeatherData(savedSearch.weatherSnapshot);
     setCurrentCoords({lat: savedSearch.latitude, lon: savedSearch.longitude});
     if (savedSearch.weatherSnapshot.resolvedLat && savedSearch.weatherSnapshot.resolvedLon) {
-      // If the snapshot has resolved coords, use them for AI scene too
        setCurrentCoords({lat: savedSearch.weatherSnapshot.resolvedLat, lon: savedSearch.weatherSnapshot.resolvedLon});
     }
-
 
     if (savedSearch.weatherSnapshot.current.locationName && !savedSearch.weatherSnapshot.current.locationName.startsWith('coords:')) {
       generateWeatherScene({ location: savedSearch.weatherSnapshot.current.locationName } as GenerateWeatherSceneInput)
