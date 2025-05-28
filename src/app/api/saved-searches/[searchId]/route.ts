@@ -25,13 +25,17 @@ export async function DELETE(request: NextRequest, context: { params: Params }) 
       return NextResponse.json({ error: 'Invalid search ID format' }, { status: 400 });
     }
 
+    // Log the IDs for debugging
+    console.log(`Attempting to delete searchId: ${searchId} for userId (string from token): ${userId}`);
+
     const collection = await getSavedSearchesCollection();
-    const result = await collection.deleteOne({ 
-      _id: new ObjectId(searchId), 
+    const result = await collection.deleteOne({
+      _id: new ObjectId(searchId),
       userId: new ObjectId(userId) // Ensure the user owns this search
     });
 
     if (result.deletedCount === 0) {
+      console.warn(`Delete operation: No document found for searchId ${searchId} and userId ${userId}.`);
       return NextResponse.json({ error: 'Saved search not found or user not authorized to delete' }, { status: 404 });
     }
 
@@ -63,6 +67,8 @@ export async function PUT(request: NextRequest, context: { params: Params }) {
     if (!locationName || locationName.trim() === "") {
       return NextResponse.json({ error: 'Location name cannot be empty' }, { status: 400 });
     }
+    
+    console.log(`Attempting to update searchId: ${searchId} for userId (string from token): ${userId} with new locationName: ${locationName}`);
 
     const collection = await getSavedSearchesCollection();
     const existingSearch = await collection.findOne({
@@ -71,6 +77,7 @@ export async function PUT(request: NextRequest, context: { params: Params }) {
     });
 
     if (!existingSearch) {
+      console.warn(`Update operation: No document found for searchId ${searchId} and userId ${userId}.`);
       return NextResponse.json({ error: 'Saved search not found or user not authorized to update' }, { status: 404 });
     }
 
@@ -82,15 +89,13 @@ export async function PUT(request: NextRequest, context: { params: Params }) {
       refreshedWeatherData = await getRealtimeWeatherData(locationString);
     } catch (weatherError) {
       console.error("Failed to refresh weather data during update:", weatherError);
-      // Decide if you want to proceed without refreshing or return an error
-      // For now, let's return an error if weather refresh fails, as it's part of the intended update
       return NextResponse.json({ error: 'Failed to refresh weather data for the location', details: (weatherError as Error).message }, { status: 500 });
     }
     
     const now = new Date();
     const updateDoc: Partial<SavedSearch> = {
       locationName: locationName.trim(),
-      weatherSnapshot: refreshedWeatherData, // Use the newly fetched weather data
+      weatherSnapshot: refreshedWeatherData,
       updatedAt: now,
     };
 
@@ -104,8 +109,7 @@ export async function PUT(request: NextRequest, context: { params: Params }) {
       return NextResponse.json({ error: 'Saved search not found or user not authorized' }, { status: 404 });
     }
     if (result.modifiedCount === 0 && result.matchedCount === 1) {
-      // No actual change was made (e.g., submitted same locationName and weather didn't change)
-      // Return the existing search as if it were updated to avoid client confusion
+      // No actual change was made (e.g., submitted same locationName and weather didn't change significantly)
       const unmodifiedSearch = await collection.findOne({ _id: new ObjectId(searchId) });
       return NextResponse.json(unmodifiedSearch, { status: 200 });
     }
