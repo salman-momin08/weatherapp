@@ -1,12 +1,20 @@
-// This type definition is no longer needed as Firebase user sync to MongoDB is removed.
-// You can delete this file: src/types/user.ts
-
-// console.log("MongoUser type has been removed due to Firebase removal.");
+// src/types/user.ts
+import type { ObjectId } from 'mongodb';
 
 export interface MongoUser {
-  // Define a local user structure if needed for non-Firebase local user management
-  // For example:
-  // localId?: string;
-  // username?: string;
-  // preferences?: object;
+  _id?: ObjectId;
+  name: string;
+  email: string;
+  password?: string; // Will be hashed, and not sent to client
+  mobileNumber: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// For JWT payload and client-side user object
+export interface ClientUser {
+  id: string; // MongoDB ObjectId as string
+  name: string;
+  email: string;
+  mobileNumber: string;
 }

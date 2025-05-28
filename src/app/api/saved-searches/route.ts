@@ -1,16 +1,22 @@
-
 // src/app/api/saved-searches/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSavedSearchesCollection } from '@/lib/mongodb';
 import type { WeatherData } from '@/types/weather';
 import type { SavedSearch } from '@/types/savedSearch';
 import { ObjectId } from 'mongodb';
+import { getUserIdFromRequest } from '@/lib/authUtils'; // Import JWT verification
 
-// GET: Fetch saved searches
+// GET: Fetch saved searches for the authenticated user
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const collection = await getSavedSearchesCollection();
-    const savedSearches = await collection.find({}).sort({ createdAt: -1 }).toArray();
+    // Filter searches by userId
+    const savedSearches = await collection.find({ userId }).sort({ createdAt: -1 }).toArray();
     return NextResponse.json(savedSearches, { status: 200 });
   } catch (error) {
     console.error('Failed to fetch saved searches:', error);
@@ -18,9 +24,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Create a new saved search
+// POST: Create a new saved search for the authenticated user
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const requestBody = await request.json();
     const { weatherData, locationName, latitude, longitude } = requestBody as {
       weatherData: WeatherData;
@@ -35,7 +46,8 @@ export async function POST(request: NextRequest) {
 
     const collection = await getSavedSearchesCollection();
     const now = new Date();
-    const newSavedSearch: Omit<SavedSearch, '_id'> = { // Omit _id as it's auto-generated
+    const newSavedSearch: Omit<SavedSearch, '_id'> = {
+      userId, // Associate with the authenticated user
       locationName: locationName || weatherData.current.locationName,
       latitude,
       longitude,
@@ -55,7 +67,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(insertedDoc, { status: 201 });
   } catch (error: any) {
     console.error('Failed to save search:', error);
-    // Handle cases where request.json() might fail (e.g., invalid JSON body)
     if (error instanceof SyntaxError && error.message.toLowerCase().includes("json")) {
         return NextResponse.json({ error: 'Invalid request body: Must be valid JSON.' }, { status: 400 });
     }
