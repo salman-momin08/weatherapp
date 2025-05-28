@@ -19,7 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Github, Linkedin, Loader2, ShieldAlert, Save, ListChecks, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const DEFAULT_LOCATION = "Paris";
+const DEFAULT_LOCATION = "Bangalore";
 
 export default function WeatherPage() {
   const { toast } = useToast();
