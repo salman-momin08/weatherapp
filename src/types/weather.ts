@@ -50,7 +50,8 @@ export interface WeatherData {
   resolvedLon?: number; // Added for reliably saving coordinates
 }
 
-export interface AIWeatherScene {
-  imageUri: string | null;
-  reliability: string | null;
-}
+// AIWeatherScene type removed
+// export interface AIWeatherScene {
+//   imageUri: string | null;
+//   reliability: string | null;
+// }
