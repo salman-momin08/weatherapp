@@ -1,29 +1,37 @@
+
 // src/components/SavedSearchItem.tsx
 "use client";
 
 import type { SavedSearch } from '@/types/savedSearch';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Thermometer, CalendarDays, Trash2, Eye } from 'lucide-react'; 
+import { MapPin, Thermometer, CalendarDays, Trash2, Eye, Edit3 } from 'lucide-react'; 
 import { getWeatherIcon } from '@/lib/weather-utils';
 
 interface SavedSearchItemProps {
   search: SavedSearch;
   onView: (search: SavedSearch) => void; 
   onDelete: (searchId: string) => void; 
+  onEdit: (search: SavedSearch) => void; // New prop for editing
+  isDeleting: boolean; // To disable buttons while deleting this item
+  isEditing: boolean; // To disable buttons while editing this item (or another)
 }
 
-export function SavedSearchItem({ search, onView, onDelete }: SavedSearchItemProps) {
+export function SavedSearchItem({ search, onView, onDelete, onEdit, isDeleting, isEditing }: SavedSearchItemProps) {
   const { locationName, weatherSnapshot, createdAt, _id } = search;
   const currentSnapshot = weatherSnapshot.current;
 
   const handleDelete = () => {
     if (_id) {
-      // Optional: Add a confirmation dialog here before calling onDelete
-      // For now, directly call onDelete
       onDelete(_id.toString());
     }
   };
+
+  const handleEdit = () => {
+    onEdit(search);
+  };
+
+  const anyOperationInProgress = isDeleting || isEditing;
 
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow bg-card/90 backdrop-blur-sm">
@@ -36,6 +44,9 @@ export function SavedSearchItem({ search, onView, onDelete }: SavedSearchItemPro
             </CardTitle>
             <CardDescription>
               Saved: {new Date(createdAt).toLocaleDateString()} {new Date(createdAt).toLocaleTimeString()}
+              {search.updatedAt && new Date(search.updatedAt).getTime() !== new Date(search.createdAt).getTime() && (
+                <span className="block text-xs">Updated: {new Date(search.updatedAt).toLocaleDateString()} {new Date(search.updatedAt).toLocaleTimeString()}</span>
+              )}
             </CardDescription>
           </div>
           <div className="flex items-center text-accent">
@@ -58,10 +69,13 @@ export function SavedSearchItem({ search, onView, onDelete }: SavedSearchItemPro
         )}
       </CardContent>
       <CardFooter className="flex justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={handleDelete} aria-label="Delete search">
+        <Button variant="outline" size="sm" onClick={handleEdit} aria-label="Edit search" disabled={anyOperationInProgress}>
+          <Edit3 className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleDelete} aria-label="Delete search" disabled={anyOperationInProgress}>
           <Trash2 className="h-4 w-4" />
         </Button>
-        <Button size="sm" onClick={() => onView(search)} aria-label="View search details">
+        <Button size="sm" onClick={() => onView(search)} aria-label="View search details" disabled={anyOperationInProgress}>
           <Eye className="mr-1.5 h-4 w-4" /> View / Load
         </Button>
       </CardFooter>

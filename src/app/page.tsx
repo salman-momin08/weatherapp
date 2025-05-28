@@ -13,9 +13,10 @@ import type { SavedSearch } from '@/types/savedSearch';
 import { getRealtimeWeatherData } from '@/app/actions/weatherActions';
 import { generateWeatherScene, type GenerateWeatherSceneInput } from '@/ai/flows/generate-weather-scene';
 import { SavedSearchItem } from '@/components/SavedSearchItem';
+import { EditSavedSearchDialog } from '@/components/EditSavedSearchDialog'; // Import the new dialog
 import { AuthDisplay } from '@/components/AuthDisplay'; 
 import { useAuth } from '@/hooks/useAuth'; 
-import { Github, Linkedin, Loader2, ShieldAlert, Save, ListChecks } from 'lucide-react';
+import { Github, Linkedin, Loader2, ShieldAlert, Save, ListChecks, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const DEFAULT_LOCATION = "Paris";
@@ -35,8 +36,13 @@ export default function WeatherPage() {
 
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [isLoadingSaved, setIsLoadingSaved] = useState<boolean>(false);
-  const [isDeletingSearch, setIsDeletingSearch] = useState<string | null>(null); // To track which search is being deleted
+  const [isDeletingSearchId, setIsDeletingSearchId] = useState<string | null>(null);
   const [showSavedSearches, setShowSavedSearches] = useState<boolean>(false);
+
+  const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [isUpdatingSearch, setIsUpdatingSearch] = useState<boolean>(false);
+
 
   const fetchWeatherAndScene = useCallback(async (loc: string, coords?: {lat: number, lon: number}) => {
     setIsLoading(true);
@@ -46,9 +52,9 @@ export default function WeatherPage() {
 
     try {
       const weatherPromise = getRealtimeWeatherData(loc);
-      const scenePromise = !loc.startsWith('coords:')
+      const scenePromise = !loc.startsWith('coords:') && loc // Ensure loc is not empty for scene generation
         ? generateWeatherScene({ location: loc } as GenerateWeatherSceneInput)
-        : Promise.resolve({ imageUri: null, reliability: 'AI scene generation skipped for coordinate-based search.' });
+        : Promise.resolve({ imageUri: null, reliability: 'AI scene generation skipped for coordinate-based or empty search.' });
 
       const [weatherResult, sceneDataResult] = await Promise.allSettled([weatherPromise, scenePromise]);
 
@@ -94,9 +100,9 @@ export default function WeatherPage() {
         },
       });
       const responseText = await response.text();
+      let descriptiveError = `Failed to fetch saved searches. Status: ${response.status}.`;
 
       if (!response.ok) {
-        let descriptiveError = `Failed to fetch saved searches. Status: ${response.status}.`;
         try {
             const errorData = JSON.parse(responseText);
             descriptiveError += ` Server message: ${errorData.error || errorData.message || 'Unknown API error'}`;
@@ -104,6 +110,7 @@ export default function WeatherPage() {
                 console.error("Detailed server error for saved searches:", errorData.details);
             }
         } catch (jsonParseError) {
+            // If it's not JSON, it's likely an HTML error page (e.g. server crash)
             descriptiveError += " The server returned an unexpected (non-JSON) response. This might indicate a server-side issue or misconfiguration. Check server logs.";
             console.error("Received HTML or non-JSON error from /api/saved-searches GET:", responseText.substring(0, 500) + (responseText.length > 500 ? "..." : ""));
         }
@@ -210,8 +217,8 @@ export default function WeatherPage() {
       });
 
       const responseText = await response.text();
+      let descriptiveError = `Failed to save search. Status: ${response.status}.`;
       if (!response.ok) {
-        let descriptiveError = `Failed to save search. Status: ${response.status}.`;
         try {
             const errorData = JSON.parse(responseText);
             descriptiveError += ` Server message: ${errorData.error || errorData.details || errorData.message || 'Unknown API error'}`;
@@ -269,7 +276,7 @@ export default function WeatherPage() {
       toast({ title: "Login Required", description: "Please log in to delete searches.", variant: "destructive" });
       return;
     }
-    setIsDeletingSearch(searchId);
+    setIsDeletingSearchId(searchId);
     try {
       const response = await fetch(`/api/saved-searches/${searchId}`, {
         method: 'DELETE',
@@ -295,7 +302,54 @@ export default function WeatherPage() {
       console.error("Failed to delete search:", err);
       toast({ title: "Error Deleting", description: (err as Error).message || "Could not delete the search.", variant: "destructive" });
     } finally {
-      setIsDeletingSearch(null);
+      setIsDeletingSearchId(null);
+    }
+  };
+
+  const handleEditSearch = (search: SavedSearch) => {
+    setEditingSearch(search);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateSearch = async (searchId: string, newLocationName: string): Promise<boolean> => {
+    if (!token || !user) {
+      toast({ title: "Login Required", description: "Please log in to update searches.", variant: "destructive" });
+      return false;
+    }
+    setIsUpdatingSearch(true);
+    try {
+      const response = await fetch(`/api/saved-searches/${searchId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ locationName: newLocationName }),
+      });
+      const responseText = await response.text();
+      if (!response.ok) {
+        let descriptiveError = `Failed to update search. Status: ${response.status}.`;
+        try {
+          const errorData = JSON.parse(responseText);
+          descriptiveError += ` Server message: ${errorData.error || errorData.message || 'Unknown API error'}`;
+        } catch (jsonError) {
+          descriptiveError += " The server returned an unexpected (non-JSON) response.";
+          console.error("Received HTML or non-JSON error from /api/saved-searches PUT:", responseText.substring(0, 500) + (responseText.length > 500 ? "..." : ""));
+        }
+        throw new Error(descriptiveError);
+      }
+      const updatedSearch: SavedSearch = JSON.parse(responseText);
+      toast({ title: "Search Updated", description: `${updatedSearch.locationName} has been updated.` });
+      setSavedSearches(prevSearches => 
+        prevSearches.map(s => s._id?.toString() === searchId ? updatedSearch : s)
+      );
+      return true;
+    } catch (err) {
+      console.error("Failed to update search:", err);
+      toast({ title: "Error Updating", description: (err as Error).message || "Could not update the search.", variant: "destructive" });
+      return false;
+    } finally {
+      setIsUpdatingSearch(false);
     }
   };
 
@@ -310,6 +364,8 @@ export default function WeatherPage() {
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed'
   };
+  
+  const anyLoadingState = isLoading || isSaving || authIsLoading || !!isDeletingSearchId || isUpdatingSearch || isLoadingSaved;
 
   return (
     <div className="min-h-screen flex flex-col transition-all duration-1000 ease-in-out" style={currentBackgroundStyle}>
@@ -321,15 +377,15 @@ export default function WeatherPage() {
       </header>
 
       <main className="flex-grow container mx-auto p-4 md:p-8 flex flex-col items-center">
-        <LocationInput onSearch={handleSearch} onGeolocate={handleGeolocate} isLoading={isLoading || isSaving || authIsLoading || !!isDeletingSearch} />
+        <LocationInput onSearch={handleSearch} onGeolocate={handleGeolocate} isLoading={anyLoadingState} />
 
         {user && !authIsLoading && ( 
           <div className="flex gap-2 mb-6">
-              <Button onClick={handleSaveSearch} disabled={isSaving || isLoading || !weatherData || !!isDeletingSearch} className="min-w-[150px]">
+              <Button onClick={handleSaveSearch} disabled={anyLoadingState || !weatherData} className="min-w-[150px]">
                   {isSaving ? <Loader2 className="animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save Search</>}
               </Button>
-              <Button variant="outline" onClick={() => setShowSavedSearches(prev => !prev)} disabled={isLoadingSaved || !!isDeletingSearch} className="min-w-[180px]">
-                  {isLoadingSaved ? <Loader2 className="animate-spin" /> : <><ListChecks className="mr-2 h-4 w-4" /> {showSavedSearches ? "Hide" : "My Saved Searches"}</>}
+              <Button variant="outline" onClick={() => setShowSavedSearches(prev => !prev)} disabled={anyLoadingState} className="min-w-[180px]">
+                  {isLoadingSaved && showSavedSearches ? <Loader2 className="animate-spin" /> : <><ListChecks className="mr-2 h-4 w-4" /> {showSavedSearches ? "Hide" : "My Saved Searches"}</>}
               </Button>
           </div>
         )}
@@ -349,7 +405,10 @@ export default function WeatherPage() {
                         key={s._id?.toString()} 
                         search={s} 
                         onView={handleViewSavedSearch}
-                        onDelete={handleDeleteSearch} 
+                        onDelete={handleDeleteSearch}
+                        onEdit={handleEditSearch}
+                        isDeleting={isDeletingSearchId === s._id?.toString()}
+                        isEditing={isUpdatingSearch || (editingSearch?._id === s._id?.toString() && isEditModalOpen)}
                     />
                   ))}
                 </div>
@@ -395,15 +454,23 @@ export default function WeatherPage() {
         )}
       </main>
 
+      <EditSavedSearchDialog
+        isOpen={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        search={editingSearch}
+        onUpdate={handleUpdateSearch}
+        isLoading={isUpdatingSearch}
+      />
+
       <footer className="p-4 bg-background/70 backdrop-blur-md shadow-inner text-center">
         <p className="text-sm text-muted-foreground">
           Developed by khwajamainuddin.
         </p>
         <div className="flex justify-center space-x-4 mt-2">
-            <a href="https://github.com/FirebaseExtended/studio-examples/tree/main/weather-eyes-genkit" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">
+            <a href="https://github.com/FirebaseExtended/studio-examples/tree/main/weather-eyes-genkit" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" className="group">
                 <Github className="h-5 w-5 hover:text-primary transition-colors" />
             </a>
-            <a href="https://www.linkedin.com/company/product-manager-accelerator/" target="_blank" rel="noopener noreferrer" aria-label="Product Manager Accelerator LinkedIn">
+            <a href="https://www.linkedin.com/company/product-manager-accelerator/" target="_blank" rel="noopener noreferrer" aria-label="Product Manager Accelerator LinkedIn" className="group">
                 <Linkedin className="h-5 w-5 hover:text-primary transition-colors" />
             </a>
         </div>
