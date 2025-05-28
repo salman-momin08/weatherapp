@@ -1,9 +1,12 @@
+
 // src/components/WeatherDisplay.tsx
 "use client";
 
 import type { WeatherData, AIWeatherScene } from '@/types/weather';
 import { CurrentWeather } from './CurrentWeather';
 import { ForecastItem } from './ForecastItem';
+import { AQIDisplay } from './AQIDisplay'; // Import AQIDisplay
+import { HourlyForecast } from './HourlyForecast'; // Import HourlyForecast
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { CalendarDays } from 'lucide-react';
@@ -15,8 +18,16 @@ interface WeatherDisplayProps {
 
 export function WeatherDisplay({ weatherData, aiScene }: WeatherDisplayProps) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 w-full">
       <CurrentWeather data={weatherData.current} aiReliability={aiScene?.reliability} />
+      
+      {weatherData.aqi && (
+        <AQIDisplay data={weatherData.aqi} />
+      )}
+
+      {weatherData.hourlyForecast && weatherData.hourlyForecast.length > 0 && (
+        <HourlyForecast data={weatherData.hourlyForecast} />
+      )}
       
       <Card className="w-full max-w-3xl mx-auto shadow-xl bg-card/80 backdrop-blur-sm">
         <CardHeader>
@@ -38,4 +49,3 @@ export function WeatherDisplay({ weatherData, aiScene }: WeatherDisplayProps) {
     </div>
   );
 }
-

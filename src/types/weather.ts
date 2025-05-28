@@ -1,4 +1,24 @@
 
+export interface AQIPollutant {
+  name: string; // e.g., "PM2.5", "O3"
+  value: number;
+  unit: string; // e.g., "µg/m³", "ppm"
+}
+
+export interface AQIData {
+  value: number; // Overall AQI value
+  category: string; // e.g., "Good", "Moderate", "Unhealthy"
+  dominantPollutant?: string; // Optional: e.g., "PM2.5"
+  pollutants: AQIPollutant[];
+}
+
+export interface HourlyForecastData {
+  time: string; // e.g., "3 PM", "15:00"
+  temperature: number;
+  description: string;
+  icon: string; // Icon code or name
+}
+
 export interface CurrentWeatherData {
   locationName: string;
   temperature: number;
@@ -21,6 +41,8 @@ export interface ForecastDayData {
 export interface WeatherData {
   current: CurrentWeatherData;
   forecast: ForecastDayData[];
+  aqi?: AQIData;
+  hourlyForecast?: HourlyForecastData[];
 }
 
 export interface AIWeatherScene {
