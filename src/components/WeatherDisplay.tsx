@@ -1,3 +1,4 @@
+
 // src/components/WeatherDisplay.tsx
 "use client";
 
@@ -16,34 +17,44 @@ interface WeatherDisplayProps {
   aiScene: AIWeatherScene | null;
   selectedForecastDay: ForecastDayData | null;
   onForecastDaySelect: (day: ForecastDayData | null) => void;
+  timeZone?: string; // For passing to CurrentWeather for accurate time formatting
 }
 
-export function WeatherDisplay({ weatherData, aiScene, selectedForecastDay, onForecastDaySelect }: WeatherDisplayProps) {
+export function WeatherDisplay({ weatherData, aiScene, selectedForecastDay, onForecastDaySelect, timeZone }: WeatherDisplayProps) {
   
   const aqiDataToDisplay = selectedForecastDay?.aqi ?? weatherData.aqi;
   const hourlyDataToDisplay = selectedForecastDay?.hourlyForecast ?? weatherData.hourlyForecast;
   
-  // Determine the date label for AQI and Hourly Forecast sections
-  let displayDateLabel = "Today"; // Default to today
+  let displayDateLabel = "Today"; 
   if (selectedForecastDay) {
-    const today = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    const tomorrow = new Date();
-    tomorrow.setDate(new Date().getDate() + 1);
-    const tomorrowDateString = tomorrow.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    // For simplicity, using the date string from forecast data for the label
+    // This assumes the forecastData.date is already in a user-friendly short format like "Mon" or "Mon, Jul 22"
+    // If it's just "Mon", that's fine. If it's "Mon, Jul 22", we can split it.
+    const dateParts = selectedForecastDay.date.split(',');
+    displayDateLabel = dateParts[0]; // e.g., "Mon" from "Mon, Jul 22"
 
-    if (selectedForecastDay.date === today) {
-      displayDateLabel = "Today";
-    } else if (selectedForecastDay.date === tomorrowDateString) {
-      displayDateLabel = "Tomorrow";
-    } else {
-      displayDateLabel = selectedForecastDay.date.split(',')[0]; // Just the day name, e.g., "Mon"
+    // A more robust way to check for "Today" or "Tomorrow" if API timezone is available
+    // This requires timezone to be passed down or handled globally
+    if (timeZone) {
+        const today = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone });
+        const tomorrowDate = new Date();
+        tomorrowDate.setDate(new Date().getDate() + 1);
+        const tomorrow = tomorrowDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone });
+
+        if (selectedForecastDay.date === today) {
+            displayDateLabel = "Today";
+        } else if (selectedForecastDay.date === tomorrow) {
+            displayDateLabel = "Tomorrow";
+        }
     }
+
+
   }
 
 
   return (
     <div className="space-y-8 w-full">
-      <CurrentWeather data={weatherData.current} aiReliability={aiScene?.reliability} />
+      <CurrentWeather data={weatherData.current} aiReliability={aiScene?.reliability} timeZone={timeZone} />
       
       {aqiDataToDisplay && (
         <AQIDisplay data={aqiDataToDisplay} displayForDate={displayDateLabel} />
@@ -91,3 +102,6 @@ export function WeatherDisplay({ weatherData, aiScene, selectedForecastDay, onFo
     </div>
   );
 }
+
+
+    
