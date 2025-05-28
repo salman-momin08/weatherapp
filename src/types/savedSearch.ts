@@ -1,15 +1,16 @@
 
 // src/types/savedSearch.ts
-import type { WeatherData } from './weather';
+import type { WeatherDataCore } from './weather'; // Updated to WeatherDataCore
 import type { ObjectId } from 'mongodb';
 
 export interface SavedSearch {
   _id?: ObjectId; // MongoDB ObjectId
-  userId: ObjectId; // References MongoUser _id, stored as ObjectId in DB
+  userId: ObjectId;
   locationName: string;
   latitude: number;
   longitude: number;
-  weatherSnapshot: WeatherData;
+  weatherSnapshot: WeatherDataCore; // Use WeatherDataCore
   createdAt: Date;
-  updatedAt: Date; // Add updatedAt
+  updatedAt: Date;
 }
+

@@ -47,13 +47,20 @@ export interface AIWeatherScene {
   modelUsed?: string;
 }
 
-export interface WeatherData {
+// Renamed original WeatherData to WeatherDataCore
+export interface WeatherDataCore {
   current: CurrentWeatherData;
   forecast: ForecastDayData[];
   aqi?: AQIData;
   hourlyForecast?: HourlyForecastData[];
   timeZone?: string;
-  resolvedLat?: number; 
+  resolvedLat?: number;
   resolvedLon?: number;
   aiScene?: AIWeatherScene;
 }
+
+// New result type for the server action
+export type WeatherDataResult =
+  | { success: true; data: WeatherDataCore }
+  | { success: false; error: string };
+
