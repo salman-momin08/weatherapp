@@ -1,6 +1,7 @@
 // src/lib/mongodb.ts
 import { MongoClient, type Db, type Collection } from 'mongodb';
-import type { SavedSearch } from '@/types/savedSearch'; // We'll create this type
+import type { SavedSearch } from '@/types/savedSearch';
+import type { MongoUser } from '@/types/user'; // Added MongoUser type
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
@@ -37,6 +38,11 @@ export async function getDb(): Promise<Db> {
 export async function getSavedSearchesCollection(): Promise<Collection<SavedSearch>> {
   const db = await getDb();
   return db.collection<SavedSearch>('savedSearches');
+}
+
+export async function getUsersCollection(): Promise<Collection<MongoUser>> {
+  const db = await getDb();
+  return db.collection<MongoUser>('users');
 }
 
 export default clientPromise;

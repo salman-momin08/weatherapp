@@ -1,6 +1,7 @@
 // src/app/page.tsx
 "use client";
 
+import Link from 'next/link'; // Ensures Link is imported
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -181,6 +182,12 @@ export default function WeatherPage() {
       if (latToSave === undefined && weatherData.current.locationName.startsWith("coords:")) {
           const parts = weatherData.current.locationName.substring(7).split(',');
           if (parts.length === 2) {
+              latToSave = parseFloat(parts[0]);
+              lonToSave = parseFloat(parts[1]);
+          }
+      } else if (latToSave === undefined && weatherData.current.locationName.startsWith("Lat:")) {
+          const parts = weatherData.current.locationName.replace("Lat: ", "").replace("Lon: ", "").split(',');
+           if (parts.length === 2) {
               latToSave = parseFloat(parts[0]);
               lonToSave = parseFloat(parts[1]);
           }

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, type UserCredential } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,10 +35,52 @@ export default function SignupPage() {
     resolver: zodResolver(signupSchema),
   });
 
+  const syncUserToMongo = async (userCredential: UserCredential) => {
+    try {
+      const idToken = await userCredential.user.getIdToken();
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        // body: JSON.stringify({}), // No body needed as info is from token
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Failed to sync user to MongoDB:', errorData);
+        // Non-critical error, user is signed up in Firebase. Maybe log this for admin.
+        toast({
+          title: "Signup Note",
+          description: "Account created, but profile sync had an issue. You can still log in.",
+          variant: "default", // Not destructive, as Firebase signup succeeded
+        });
+      } else {
+        console.log("User successfully synced to MongoDB");
+      }
+    } catch (error) {
+      console.error("Error syncing user to MongoDB:", error);
+      // Handle client-side errors during the sync call
+       toast({
+          title: "Signup Info",
+          description: "Account created. There was an issue syncing profile details.",
+          variant: "default",
+        });
+    }
+  };
+
+
   const onSubmit: SubmitHandler<SignupFormInputs> = async (data) => {
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      
+      // After successful Firebase signup, attempt to sync to MongoDB
+      if (userCredential.user) {
+        await syncUserToMongo(userCredential);
+      }
+
       toast({ title: "Signup Successful", description: "Welcome to WeatherEyes!" });
       router.push('/'); // Redirect to home page after signup
     } catch (error: any) {
