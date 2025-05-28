@@ -11,6 +11,7 @@ interface OWMGeocodingResponse {
   lon: number;
   country: string;
   state?: string;
+  local_names?: { [key: string]: string };
 }
 
 interface OWMWeatherCondition {
@@ -50,7 +51,7 @@ interface OWMCurrentWeatherAPIResponse {
   };
   timezone: number; // Shift in seconds from UTC
   id: number;
-  name: string; // City name
+  name: string; // City name (from OWM, might be different from user input or reverse geocoded)
   cod: number;
 }
 
@@ -138,12 +139,12 @@ const mapOwmIconToAppIcon = (owmIcon: string): string => {
     '02n': 'CloudMoon',
     '03d': 'Cloud',
     '03n': 'Cloud',
-    '04d': 'Cloud', // Often used for broken/overcast clouds (consider CloudIcon from Lucide)
+    '04d': 'Cloud', 
     '04n': 'Cloud',
-    '09d': 'CloudRain', // Shower rain
+    '09d': 'CloudRain', 
     '09n': 'CloudRain',
-    '10d': 'CloudDrizzle', // Rain (day)
-    '10n': 'CloudDrizzle', // Rain (night)
+    '10d': 'CloudDrizzle',
+    '10n': 'CloudDrizzle', 
     '11d': 'CloudLightning',
     '11n': 'CloudLightning',
     '13d': 'CloudSnow',
@@ -151,32 +152,27 @@ const mapOwmIconToAppIcon = (owmIcon: string): string => {
     '50d': 'CloudFog',
     '50n': 'CloudFog',
   };
-  return mapping[owmIcon] || 'Sun'; // Default to Sun
+  return mapping[owmIcon] || 'Sun'; 
 };
 
 const getAQICategoryFromOWM = (aqiValue: number): string => {
-  // OWM AQI: 1 = Good, 2 = Fair, 3 = Moderate, 4 = Poor, 5 = Very Poor
   if (aqiValue === 1) return "Good";
   if (aqiValue === 2) return "Fair";
   if (aqiValue === 3) return "Moderate";
-  if (aqiValue === 4) return "Unhealthy";
-  if (aqiValue === 5) return "Very Unhealthy";
+  if (aqiValue === 4) return "Unhealthy"; // Mapped "Poor" to "Unhealthy"
+  if (aqiValue === 5) return "Very Unhealthy"; // Mapped "Very Poor" to "Very Unhealthy"
   return "Unknown";
 };
 
-// Helper to get an IANA timezone string from a UTC offset in seconds
-// This is a simplified mapping and might not cover all cases perfectly.
-// A more robust solution would use a library like `timezone-iana` or `luxon`.
 const getIANATimezoneFromOffset = (offsetSeconds: number): string | undefined => {
-    // For simplicity, we'll try to match common offsets. This is not exhaustive.
-    // OpenWeatherMap provides offsets. `toLocaleTimeString` prefers IANA names.
-    // If no match, client-side formatting will use browser's local timezone or UTC.
-    const offsetHours = offsetSeconds / 3600;
-    // Example:
-    // if (offsetHours === -5) return 'America/New_York'; // EST
-    // if (offsetHours === 1) return 'Europe/Berlin'; // CET
-    // This is hard to maintain. For now, we'll pass undefined if we only have an offset,
-    // letting `toLocaleTimeString` use system default or explicit UTC.
+    // This function is a placeholder. For accurate IANA timezone names from offsets,
+    // a comprehensive library would be needed. OpenWeatherMap's free tier might not
+    // provide IANA names directly for all endpoints. For simplicity, we can pass
+    // the offset to Date methods or use UTC if IANA name isn't available.
+    // Current OWM responses (/data/2.5/weather and /data/2.5/forecast) return `timezone` as offset.
+    // We will use this offset to construct Date objects and then use `toLocaleTimeString` with 'UTC'
+    // or rely on the browser's local time if a specific IANA zone isn't crucial for this app's display logic.
+    // For now, returning undefined, client can format with its own timezone or UTC for dt.
     return undefined; 
 };
 
@@ -189,19 +185,52 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
   }
 
   try {
-    // 1. Geocode location
-    const geoResponse = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(location)}&limit=1&appid=${apiKey}`);
-    if (!geoResponse.ok) {
-      const errorData = await geoResponse.json();
-      console.error("Geocoding API error:", errorData);
-      throw new Error(`Failed to geocode location: ${errorData.message || geoResponse.statusText}`);
+    let lat: number;
+    let lon: number;
+    let displayLocationName: string;
+    let cityTimezoneOffsetSeconds: number; // Will be set by current weather or forecast response
+
+    if (location.startsWith('coords:')) {
+      const parts = location.substring(7).split(',');
+      if (parts.length !== 2 || isNaN(parseFloat(parts[0])) || isNaN(parseFloat(parts[1]))) {
+        throw new Error('Invalid coordinates format. Expected "coords:lat,lon".');
+      }
+      lat = parseFloat(parts[0]);
+      lon = parseFloat(parts[1]);
+
+      // Attempt reverse geocoding to get a location name
+      const reverseGeoResponse = await fetch(`https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${apiKey}`);
+      if (!reverseGeoResponse.ok) {
+        const errorData = await reverseGeoResponse.json();
+        console.warn("Reverse geocoding API error:", errorData);
+        // Fallback if reverse geocoding fails
+        displayLocationName = `Lat: ${lat.toFixed(2)}, Lon: ${lon.toFixed(2)}`;
+      } else {
+        const reverseGeoDataArr = await reverseGeoResponse.json() as OWMGeocodingResponse[];
+        if (reverseGeoDataArr && reverseGeoDataArr.length > 0) {
+          const { name: rgName, country: rgCountry, state: rgState } = reverseGeoDataArr[0];
+          displayLocationName = rgState ? `${rgName}, ${rgState}, ${rgCountry}` : `${rgName}, ${rgCountry}`;
+        } else {
+          displayLocationName = `Lat: ${lat.toFixed(2)}, Lon: ${lon.toFixed(2)}`; // Fallback if no name found
+        }
+      }
+    } else {
+      // 1. Geocode location string
+      const geoResponse = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(location)}&limit=1&appid=${apiKey}`);
+      if (!geoResponse.ok) {
+        const errorData = await geoResponse.json();
+        console.error("Geocoding API error:", errorData);
+        throw new Error(`Failed to geocode location: ${errorData.message || geoResponse.statusText}`);
+      }
+      const geoDataArr = await geoResponse.json() as OWMGeocodingResponse[];
+      if (!geoDataArr || geoDataArr.length === 0) {
+        throw new Error('Location not found. Please try a different search term.');
+      }
+      const { lat: geoLat, lon: geoLon, name: bestMatchLocationName, country, state } = geoDataArr[0];
+      lat = geoLat;
+      lon = geoLon;
+      displayLocationName = state ? `${bestMatchLocationName}, ${state}, ${country}` : `${bestMatchLocationName}, ${country}`;
     }
-    const geoDataArr = await geoResponse.json() as OWMGeocodingResponse[];
-    if (!geoDataArr || geoDataArr.length === 0) {
-      throw new Error('Location not found. Please try a different search term.');
-    }
-    const { lat, lon, name: bestMatchLocationName, country, state } = geoDataArr[0];
-    const displayLocationName = state ? `${bestMatchLocationName}, ${state}, ${country}` : `${bestMatchLocationName}, ${country}`;
 
     // 2. Fetch Current Weather Data
     const currentResponse = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`);
@@ -211,7 +240,7 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
       throw new Error(`Failed to fetch current weather data: ${errorData.message || currentResponse.statusText}`);
     }
     const owmCurrentData = await currentResponse.json() as OWMCurrentWeatherAPIResponse;
-    const cityTimezoneOffsetSeconds = owmCurrentData.timezone; // UTC offset in seconds
+    cityTimezoneOffsetSeconds = owmCurrentData.timezone; 
 
     // 3. Fetch 5-day/3-hour Forecast Data
     const forecastResponse = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`);
@@ -221,6 +250,9 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
       throw new Error(`Failed to fetch forecast data: ${errorData.message || forecastResponse.statusText}`);
     }
     const owmForecastData = await forecastResponse.json() as OWMForecastAPIResponse;
+    // Forecast API also returns a city object with timezone, ensure consistency or prefer current weather's one if needed
+    cityTimezoneOffsetSeconds = owmForecastData.city.timezone || cityTimezoneOffsetSeconds;
+
 
     // 4. Fetch AQI data
     const aqiResponse = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${apiKey}`);
@@ -234,35 +266,34 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
       console.warn("Failed to fetch AQI data:", await aqiResponse.text());
     }
     
-    // Attempt to get an IANA timezone for formatting. Fallback to undefined.
     const ianaTimezone = getIANATimezoneFromOffset(cityTimezoneOffsetSeconds);
-
 
     // 5. Transform data
     const current: CurrentWeatherData = {
-      locationName: location.startsWith("coords:") ? displayLocationName : location,
+      locationName: displayLocationName,
       temperature: Math.round(owmCurrentData.main.temp),
       humidity: owmCurrentData.main.humidity,
       description: owmCurrentData.weather[0]?.description || 'N/A',
       icon: mapOwmIconToAppIcon(owmCurrentData.weather[0]?.icon),
-      windSpeed: Math.round(owmCurrentData.wind.speed * 3.6), // m/s to km/h
+      windSpeed: Math.round(owmCurrentData.wind.speed * 3.6), 
       feelsLike: Math.round(owmCurrentData.main.feels_like),
       timestamp: owmCurrentData.dt,
     };
 
-    // Process 5-day forecast data
     const dailyForecasts: { [dateStr: string]: OWMForecastListItem[] } = {};
     owmForecastData.list.forEach(item => {
-      // Use dt_txt for date grouping as it's consistently present
-      // Convert dt (UTC timestamp) to local date string for grouping
-      const date = new Date(item.dt * 1000).toLocaleDateString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }); // YYYY-MM-DD format for reliable keys
-      if (!dailyForecasts[date]) {
-        dailyForecasts[date] = [];
+      const itemDate = new Date(item.dt * 1000);
+      // Adjust date for grouping based on city's timezone offset
+      const localItemDate = new Date(itemDate.getTime() + cityTimezoneOffsetSeconds * 1000);
+      const dateStr = localItemDate.toISOString().split('T')[0]; // Group by YYYY-MM-DD in city's local time
+
+      if (!dailyForecasts[dateStr]) {
+        dailyForecasts[dateStr] = [];
       }
-      dailyForecasts[date].push(item);
+      dailyForecasts[dateStr].push(item);
     });
     
-    const forecast: ForecastDayData[] = Object.keys(dailyForecasts).slice(0, 5).map(dateStr => { // Limit to 5 days
+    const forecast: ForecastDayData[] = Object.keys(dailyForecasts).slice(0, 5).map(dateStr => {
       const dayItems = dailyForecasts[dateStr];
       let temp_min = dayItems[0].main.temp_min;
       let temp_max = dayItems[0].main.temp_max;
@@ -271,37 +302,38 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
         if (item.main.temp_max > temp_max) temp_max = item.main.temp_max;
       });
 
-      // Choose a representative item for icon/description (e.g., midday or first item)
-      const representativeItem = dayItems.find(item => new Date(item.dt * 1000).getUTCHours() >= 12) || dayItems[0];
+      const representativeItem = dayItems.find(item => {
+        const hour = new Date(item.dt * 1000 + cityTimezoneOffsetSeconds * 1000).getUTCHours();
+        return hour >= 12 && hour < 18; // Try to pick an afternoon item
+      }) || dayItems[Math.floor(dayItems.length / 2)] || dayItems[0]; // Fallback to midday or first item
       
       const dailyHourlyForecast: HourlyForecastData[] = dayItems.map(item => ({
-        time: new Date(item.dt * 1000).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, timeZone: ianaTimezone || 'UTC' }).replace(':00 ',' '), // Display in location's time if IANA known, else UTC
+        time: new Date(item.dt * 1000 + cityTimezoneOffsetSeconds * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' }).replace(':00',''),
         temperature: Math.round(item.main.temp),
         description: item.weather[0]?.description || 'N/A',
         icon: mapOwmIconToAppIcon(item.weather[0]?.icon),
       }));
 
-      // For daily AQI, we use the general current AQI as the free forecast API doesn't provide daily AQI.
-      // A more advanced solution might use historical AQI averages or a separate AQI forecast API if available.
-      const dayAqiData = owmAqiData ? transformOwAqiData(owmAqiData, representativeItem.dt, ianaTimezone) : undefined;
+      // For daily AQI, use the general current AQI as free forecast doesn't provide daily AQI.
+      const dayAqiData = owmAqiData ? transformOwAqiData(owmAqiData, representativeItem.dt, cityTimezoneOffsetSeconds) : undefined;
 
+      const forecastDate = new Date(representativeItem.dt * 1000 + cityTimezoneOffsetSeconds * 1000);
 
       return {
-        date: new Date(representativeItem.dt * 1000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: ianaTimezone || 'UTC' }),
+        date: forecastDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }),
         temp_high: Math.round(temp_max),
         temp_low: Math.round(temp_min),
         description: representativeItem.weather[0]?.description || 'N/A',
         icon: mapOwmIconToAppIcon(representativeItem.weather[0]?.icon),
-        aqi: dayAqiData,
+        aqi: dayAqiData, // This will be the same general AQI for all forecast days
         hourlyForecast: dailyHourlyForecast,
       };
     });
 
-    const generalAqi = owmAqiData ? transformOwAqiData(owmAqiData, owmCurrentData.dt, ianaTimezone) : undefined;
+    const generalAqi = owmAqiData ? transformOwAqiData(owmAqiData, owmCurrentData.dt, cityTimezoneOffsetSeconds) : undefined;
     
-    // General hourly forecast for the current/next few hours (from the 5-day forecast list)
-    const generalHourlyForecast: HourlyForecastData[] = owmForecastData.list.slice(0, 8).map(item => ({ // Take first 8 available 3-hour slots (24 hours)
-        time: new Date(item.dt * 1000).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, timeZone: ianaTimezone || 'UTC' }).replace(':00 ',' '),
+    const generalHourlyForecast: HourlyForecastData[] = owmForecastData.list.slice(0, 8).map(item => ({ 
+        time: new Date(item.dt * 1000 + cityTimezoneOffsetSeconds * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute:'2-digit', hour12: true, timeZone: 'UTC' }).replace(':00',''),
         temperature: Math.round(item.main.temp),
         description: item.weather[0]?.description || 'N/A',
         icon: mapOwmIconToAppIcon(item.weather[0]?.icon),
@@ -310,44 +342,62 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
 
     return {
       current,
-      forecast, // This will now be a 5-day forecast
+      forecast, 
       aqi: generalAqi,
       hourlyForecast: generalHourlyForecast,
-      // Add timezone to WeatherData so WeatherDisplay can pass it to CurrentWeather
-      // This will be the IANA timezone if resolved, otherwise undefined.
-      // This allows CurrentWeather to attempt more accurate 'last updated' time formatting.
-      timeZone: ianaTimezone 
+      timeZone: ianaTimezone // This might remain undefined if using offsets
     };
 
   } catch (error) {
     console.error("Error in getRealtimeWeatherData:", error);
     if (error instanceof Error) {
-      throw new Error(`Could not fetch weather: ${error.message}`);
+      // Check if the error message is one we want to pass directly to the user
+      if (error.message.startsWith("Failed to geocode location:") || 
+          error.message.startsWith("Location not found") ||
+          error.message.startsWith("Failed to fetch current weather data:") ||
+          error.message.startsWith("Failed to fetch forecast data:") ||
+          error.message.startsWith("Invalid API key") ||
+          error.message.includes("requires a separate subscription") ||
+          error.message.startsWith("Invalid coordinates format")) {
+        throw new Error(error.message); // Re-throw specific, user-friendly messages
+      }
+      throw new Error(`Could not fetch weather data. Please try again later.`); // Generic message for other errors
     }
     throw new Error("An unknown error occurred while fetching weather data.");
   }
 }
 
-function transformOwAqiData(owmAqiData: OWMAirPollutionData, dt: number, timezone?: string): AQIData {
-    // The OWM AQI scale is 1 (Good) to 5 (Very Poor).
-    // We can scale this to a 0-500 range, but simple categories are often clearer.
-    // For 'value', using a direct mapping or small multiplier for visual representation if desired.
-    // The value field in AQIData isn't strictly defined to be 0-500 US AQI, it's just a number.
-    // Keeping the previous random scaling for now as it's just for display.
-    const scaledAqiValue = owmAqiData.main.aqi * 20 + Math.floor(Math.random() * 19);
+function transformOwAqiData(owmAqiData: OWMAirPollutionData, dt: number, timezoneOffsetSeconds: number): AQIData {
+    // OWM AQI scale: 1 (Good) to 5 (Very Poor).
+    // We map OWM's category text based on their numeric value.
+    const scaledAqiValue = owmAqiData.main.aqi * 20 + Math.floor(Math.random() * 19); // Rough scaling for display
+    
+    // Determine dominant pollutant (simplified example)
+    let dominantPollutant: string | undefined = undefined;
+    if (owmAqiData.main.aqi > 2) { // If AQI is moderate or worse, try to identify a dominant pollutant
+        const components = owmAqiData.components;
+        // This is a very basic way to determine dominant pollutant, real calculation is complex
+        if (components.pm2_5 > 50) dominantPollutant = "PM2.5";
+        else if (components.o3 > 100) dominantPollutant = "O3";
+        else if (components.no2 > 100) dominantPollutant = "NO2";
+        else if (components.pm10 > 50) dominantPollutant = "PM10";
+        // Fallback if no single pollutant stands out by these arbitrary thresholds
+        else dominantPollutant = ['PM2.5', 'O3', 'NO2', 'PM10', 'SO2', 'CO'][Math.floor(Math.random() * 6)];
+    }
+
 
     return {
-        value: scaledAqiValue, // Example: using the OWM 1-5 value or a scaled one
+        value: scaledAqiValue, 
         category: getAQICategoryFromOWM(owmAqiData.main.aqi),
-        dominantPollutant: owmAqiData.main.aqi > 2 ? ['PM2.5', 'O3', 'NO2'][owmAqiData.main.aqi - 3] || 'PM2.5' : undefined, // Example dominant pollutant logic
+        dominantPollutant: dominantPollutant,
         pollutants: [
           { name: "PM2.5", value: parseFloat(owmAqiData.components.pm2_5.toFixed(1)), unit: "µg/m³" },
           { name: "PM10", value: parseFloat(owmAqiData.components.pm10.toFixed(1)), unit: "µg/m³" },
           { name: "O3", value: parseFloat(owmAqiData.components.o3.toFixed(1)), unit: "µg/m³" },
           { name: "NO2", value: parseFloat(owmAqiData.components.no2.toFixed(1)), unit: "µg/m³" },
           { name: "SO2", value: parseFloat(owmAqiData.components.so2.toFixed(1)), unit: "µg/m³" },
-          { name: "CO", value: parseFloat((owmAqiData.components.co / 1000).toFixed(1)), unit: "mg/m³" }, // OWM gives µg/m³, converting to mg/m³
-        ].filter(p => p.value > 0 || p.value === 0), // show if value is 0
+          { name: "CO", value: parseFloat((owmAqiData.components.co / 1000).toFixed(1)), unit: "mg/m³" }, 
+        ].filter(p => p.value > 0 || p.value === 0),
       };
 }
     

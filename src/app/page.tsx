@@ -33,34 +33,41 @@ export default function WeatherPage() {
     try {
       // Use the new server action for weather data
       const weatherPromise = getRealtimeWeatherData(loc);
-      const scenePromise = generateWeatherScene({ location: loc } as GenerateWeatherSceneInput);
+      // Only generate scene if it's not a coordinate-based search,
+      // as AI scene generation is better with named locations.
+      const scenePromise = !loc.startsWith('coords:') 
+        ? generateWeatherScene({ location: loc } as GenerateWeatherSceneInput)
+        : Promise.resolve({ imageUri: null, reliability: 'AI scene generation skipped for coordinate-based search.' });
 
-      const [weather, sceneData] = await Promise.allSettled([weatherPromise, scenePromise]);
+
+      const [weather, sceneDataResult] = await Promise.allSettled([weatherPromise, scenePromise]);
 
       if (weather.status === 'fulfilled') {
         setWeatherData(weather.value);
-        // No automatic selection of forecast day needed here, current day's details are part of WeatherData
       } else {
         console.error("Weather fetch error:", weather.reason);
-        setError("Could not fetch weather data. Please try again.");
+        const errorMessage = weather.reason instanceof Error ? weather.reason.message : "Failed to fetch weather data.";
+        setError(errorMessage); // Use the specific error message from the action
         toast({
           title: "Error",
-          description: "Failed to fetch weather data.",
+          description: errorMessage,
           variant: "destructive",
         });
       }
       
-      if (sceneData.status === 'fulfilled' && sceneData.value.imageUri) {
-         setAiScene({ imageUri: sceneData.value.imageUri, reliability: sceneData.value.reliability });
-      } else {
-        console.warn("AI Scene generation warning:", sceneData.status === 'rejected' ? sceneData.reason : "No image URI returned");
-        // Do not toast for failed AI scene if it's a non-critical background,
-        // especially if it might happen frequently with the new image gen model.
-        // The UI will use a default background.
+      if (sceneDataResult.status === 'fulfilled' && sceneDataResult.value.imageUri) {
+         setAiScene({ imageUri: sceneDataResult.value.imageUri, reliability: sceneDataResult.value.reliability });
+      } else if (sceneDataResult.status === 'fulfilled' && !sceneDataResult.value.imageUri) {
+        // AI scene explicitly skipped or failed to generate an image, but didn't error
+        setAiScene({ imageUri: null, reliability: sceneDataResult.value.reliability });
+        console.warn("AI Scene generation: No image URI returned or generation skipped. Reliability: ", sceneDataResult.value.reliability);
+      } else if (sceneDataResult.status === 'rejected') {
+        console.warn("AI Scene generation warning:", sceneDataResult.reason);
+        setAiScene({ imageUri: null, reliability: 'AI scene generation failed.' });
       }
 
-    } catch (err) {
-      console.error("General fetch error:", err);
+    } catch (err) { // This catch block might be less used if individual promises are handled with allSettled
+      console.error("General fetch error in fetchWeatherAndScene:", err);
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
       setError(`Failed to load data: ${errorMessage}`);
       toast({
@@ -76,11 +83,11 @@ export default function WeatherPage() {
   useEffect(() => {
     // Fetch for default location on initial load
     fetchWeatherAndScene(DEFAULT_LOCATION);
-  }, [fetchWeatherAndScene]); // fetchWeatherAndScene is stable due to useCallback
+  }, [fetchWeatherAndScene]);
 
 
   const handleSearch = (searchLocation: string) => {
-    setLocation(searchLocation);
+    setLocation(searchLocation); // Update current location state if needed
     fetchWeatherAndScene(searchLocation);
   };
 
@@ -94,11 +101,9 @@ export default function WeatherPage() {
     setIsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        // For real API, you'd use coords. For mock, we simulate a name.
-        // const locationString = `${position.coords.latitude},${position.coords.longitude}`;
-        const cityFromCoords = "Current Location"; // This will be passed to the "dynamic mock"
-        setLocation(cityFromCoords); 
-        fetchWeatherAndScene(cityFromCoords); 
+        const locationString = `coords:${position.coords.latitude},${position.coords.longitude}`;
+        // setLocation(locationString); // Update current location state if needed, or let fetchWeatherAndScene handle it
+        fetchWeatherAndScene(locationString); 
       },
       (err) => {
         setError(`Geolocation error: ${err.message}`);
