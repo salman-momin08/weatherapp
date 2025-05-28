@@ -20,13 +20,13 @@ const getAQIColorClass = (category: string): string => {
       return "bg-yellow-500 hover:bg-yellow-500";
     case "moderate":
       return "bg-orange-500 hover:bg-orange-500";
-    case "unhealthy for sensitive groups":
+    case "unhealthy for sensitive groups": // Kept for completeness, map "Unhealthy" to this if needed
       return "bg-orange-600 hover:bg-orange-600";
     case "unhealthy":
       return "bg-red-500 hover:bg-red-500";
     case "very unhealthy":
       return "bg-purple-600 hover:bg-purple-600";
-    case "hazardous":
+    case "hazardous": // For very high values if your data supports it
       return "bg-maroon-700 hover:bg-maroon-700"; 
     default:
       return "bg-gray-500 hover:bg-gray-500";
@@ -36,13 +36,13 @@ const getAQIColorClass = (category: string): string => {
 export function AQIDisplay({ data, displayForDate }: AQIDisplayProps) {
   const title = `Air Quality Index (AQI) ${displayForDate ? `for ${displayForDate}` : ''}`;
   return (
-    <Card className="w-full max-w-md mx-auto shadow-xl bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm text-card-foreground">
+    <Card className="w-full max-w-md mx-auto shadow-xl bg-card text-card-foreground"> {/* White card */}
       <CardHeader className="pb-2 text-center">
-        <CardTitle className="text-2xl flex items-center justify-center text-card-foreground"> {/* Ensure title text uses card-foreground */}
-          <Leaf className="mr-2 text-card-foreground" /> {title} {/* Icon uses card-foreground */}
+        <CardTitle className="text-2xl flex items-center justify-center">
+          <Leaf className="mr-2 text-primary" /> {title} {/* Primary color for icon */}
         </CardTitle>
         {data.dominantPollutant && (
-          <CardDescription className="text-sm text-card-foreground/80"> {/* Description uses card-foreground */}
+          <CardDescription className="text-sm text-muted-foreground">
             Dominant pollutant: {data.dominantPollutant}
           </CardDescription>
         )}
@@ -52,25 +52,24 @@ export function AQIDisplay({ data, displayForDate }: AQIDisplayProps) {
           <Badge className={`text-3xl px-4 py-2 text-white ${getAQIColorClass(data.category)}`}>
             {data.value}
           </Badge>
-          <p className="text-lg font-semibold mt-2 text-card-foreground">{data.category}</p> {/* Category text uses card-foreground */}
+          <p className="text-lg font-semibold mt-2">{data.category}</p>
         </div>
         
         {data.pollutants && data.pollutants.length > 0 && (
           <div className="w-full text-sm mb-4">
-            <h4 className="font-semibold mb-2 text-center text-card-foreground/80">Pollutant Details:</h4> {/* Heading uses card-foreground */}
+            <h4 className="font-semibold mb-2 text-center text-muted-foreground">Pollutant Details:</h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {data.pollutants.map((pollutant) => (
-                // Apply frosted glass effect to pollutant detail cards
-                <div key={pollutant.name} className="p-3 bg-white/20 backdrop-blur-md rounded-lg shadow-sm border border-white/30 text-foreground text-center">
-                  <p className="font-medium">{pollutant.name}</p> {/* Text inside uses foreground (dark blue) */}
-                  <p className="text-foreground/80">{pollutant.value} {pollutant.unit}</p> {/* Text inside uses foreground (dark blue) */}
+                <div key={pollutant.name} className="p-3 bg-background rounded-lg shadow-sm border border-border text-card-foreground text-center"> {/* Subtle inner card */}
+                  <p className="font-medium">{pollutant.name}</p>
+                  <p className="text-muted-foreground">{pollutant.value} {pollutant.unit}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {data.value > 100 && (
+        {data.value > 100 && ( // Example threshold for advisory
            <Badge variant="outline" className="mt-2 p-2 text-xs text-center w-full bg-yellow-400/30 dark:bg-yellow-700/30 border-yellow-500/70 text-yellow-800 dark:text-yellow-200">
             <AlertTriangle size={14} className="mr-1 inline-block" />
              <span className="font-semibold mr-1">Health Advisory:</span> 

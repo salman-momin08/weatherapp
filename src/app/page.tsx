@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { LocationInput } from '@/components/LocationInput';
 import { WeatherDisplay } from '@/components/WeatherDisplay';
-import type { WeatherData, ForecastDayData } from '@/types/weather';
+import type { WeatherData, ForecastDayData, AIWeatherScene } from '@/types/weather';
 import type { SavedSearch } from '@/types/savedSearch';
 import { getRealtimeWeatherData } from '@/app/actions/weatherActions';
 import { SavedSearchItem } from '@/components/SavedSearchItem';
@@ -27,7 +27,7 @@ export default function WeatherPage() {
   const [location, setLocation] = useState<string>(DEFAULT_LOCATION);
   const [currentCoords, setCurrentCoords] = useState<{lat: number; lon: number} | null>(null);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-  // Removed aiSceneImage state
+  const [aiSceneImage, setAiSceneImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,12 +48,16 @@ export default function WeatherPage() {
     setError(null);
     setSelectedForecastDay(null);
     setCurrentCoords(coords || null);
-    // Removed setAiSceneImage(null);
+    setAiSceneImage(null);
 
     try {
       const weatherResult = await getRealtimeWeatherData(loc);
       setWeatherData(weatherResult);
-      // Removed AI Scene logic
+      if (weatherResult.aiScene?.imageUri) {
+        setAiSceneImage(weatherResult.aiScene.imageUri);
+      } else {
+        setAiSceneImage(null); // Explicitly set to null if no image URI
+      }
     } catch (err) {
       console.error("Error in fetchWeatherAndScene:", err);
       let errorMessage = "Failed to fetch weather data.";
@@ -61,6 +65,8 @@ export default function WeatherPage() {
         errorMessage = err.message;
       }
       setError(errorMessage);
+      setWeatherData(null); // Clear previous weather data on error
+      setAiSceneImage(null); // Clear AI scene image on error
       toast({ title: "Error Fetching Weather", description: errorMessage, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -135,7 +141,7 @@ export default function WeatherPage() {
       (position) => {
         const coords = { lat: position.coords.latitude, lon: position.coords.longitude };
         const locationString = `coords:${coords.lat},${coords.lon}`;
-        setLocation(locationString);
+        setLocation(locationString); // Keep location state consistent if needed, though fetchWeatherAndScene uses it
         fetchWeatherAndScene(locationString, coords);
       },
       (err) => {
@@ -160,6 +166,7 @@ export default function WeatherPage() {
       let latToSave: number | undefined = weatherData.resolvedLat;
       let lonToSave: number | undefined = weatherData.resolvedLon;
 
+      // Fallback if resolvedLat/Lon are not available from weatherData (e.g., if API structure changed)
       if (latToSave === undefined || lonToSave === undefined) {
         if (currentCoords) {
           latToSave = currentCoords.lat;
@@ -185,8 +192,8 @@ export default function WeatherPage() {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-            weatherData,
-            locationName: weatherData.current.locationName,
+            weatherData, // Includes AI scene if available
+            locationName: weatherData.current.locationName, // Ensure this is the human-readable name
             latitude: latToSave,
             longitude: lonToSave
         }),
@@ -209,7 +216,7 @@ export default function WeatherPage() {
       }
       const newSavedSearch: SavedSearch = JSON.parse(responseText);
       toast({ title: "Search Saved!", description: `${newSavedSearch.locationName} has been saved.` });
-      fetchSavedSearches();
+      fetchSavedSearches(); // Refresh the list of saved searches
     } catch (err) {
       console.error("Failed to save search:", err);
       toast({ title: "Error Saving", description: (err as Error).message || "Could not save the search.", variant: "destructive" });
@@ -219,12 +226,16 @@ export default function WeatherPage() {
   };
 
   const handleViewSavedSearch = (savedSearch: SavedSearch) => {
-    setLocation(savedSearch.locationName);
+    setLocation(savedSearch.locationName); // Set location input to the saved search name
     setWeatherData(savedSearch.weatherSnapshot);
     setCurrentCoords({lat: savedSearch.latitude, lon: savedSearch.longitude});
-    // Removed AI Scene logic related to savedSearch.weatherSnapshot.aiScene
-    setShowSavedSearches(false);
-    setSelectedForecastDay(null);
+    if (savedSearch.weatherSnapshot.aiScene?.imageUri) {
+        setAiSceneImage(savedSearch.weatherSnapshot.aiScene.imageUri);
+    } else {
+        setAiSceneImage(null);
+    }
+    setShowSavedSearches(false); // Optionally hide the saved searches list
+    setSelectedForecastDay(null); // Reset selected forecast day
     toast({ title: "Loaded Saved Search", description: `Displaying weather for ${savedSearch.locationName}.`});
   };
 
@@ -300,9 +311,14 @@ export default function WeatherPage() {
       setSavedSearches(prevSearches =>
         prevSearches.map(s => s._id?.toString() === searchId ? updatedSearch : s)
       );
+      // If the currently displayed weather is from the search that was just edited, update it
       if (weatherData && weatherData.current.locationName === editingSearch?.locationName) {
         setWeatherData(updatedSearch.weatherSnapshot);
-        // Removed AI Scene logic
+        if (updatedSearch.weatherSnapshot.aiScene?.imageUri) {
+            setAiSceneImage(updatedSearch.weatherSnapshot.aiScene.imageUri);
+        } else {
+            setAiSceneImage(null);
+        }
       }
       return true;
     } catch (err) {
@@ -321,19 +337,28 @@ export default function WeatherPage() {
 
   const anyLoadingState = isLoading || isSaving || authIsLoading || !!isDeletingSearchId || isUpdatingSearch || isLoadingSaved;
   
+  // Fallback gradient if AI image is not available
+  const fallbackGradient = 'linear-gradient(to bottom, hsl(var(--primary)) 0%, hsl(var(--background)) 100%)';
+
+
   return (
     <div
-      className="flex flex-col min-h-screen w-full bg-gradient-to-b from-sky-400 to-blue-100 text-foreground overflow-y-auto"
-      // Removed style={{ backgroundImage: ... }}
+      className="flex flex-col min-h-screen w-full text-foreground overflow-y-auto transition-all duration-1000 ease-in-out"
+      style={{
+        backgroundImage: aiSceneImage ? `url(${aiSceneImage})` : fallbackGradient,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
     >
       <header className="p-4 bg-background/70 backdrop-blur-md shadow-md sticky top-0 z-50">
         <div className="container mx-auto flex justify-between items-center">
-          <Link href="/" className="text-3xl font-bold text-foreground">WeatherEyes</Link> {/* Changed text-primary to text-foreground */}
+          <Link href="/" className="text-3xl font-bold text-primary">WeatherEyes</Link>
           <AuthDisplay />
         </div>
       </header>
 
-      <main className="flex-grow container mx-auto p-4 md:p-8 flex flex-col items-center"> {/* Removed overflow-y-auto from main as it's on root div */}
+      <main className="flex-grow container mx-auto p-4 md:p-8 flex flex-col items-center">
         <LocationInput onSearch={handleSearch} onGeolocate={handleGeolocate} isLoading={anyLoadingState} />
 
         {user && !authIsLoading && (
@@ -348,9 +373,9 @@ export default function WeatherPage() {
         )}
 
         {user && showSavedSearches && (
-          <Card className="w-full max-w-2xl mb-8 bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm shadow-xl">
+          <Card className="w-full max-w-2xl mb-8 bg-card text-card-foreground shadow-xl"> {/* White card */}
             <CardHeader>
-              <CardTitle className="text-2xl text-center text-card-foreground">My Saved Searches</CardTitle>
+              <CardTitle className="text-2xl text-center">My Saved Searches</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoadingSaved && <div className="flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
@@ -374,15 +399,15 @@ export default function WeatherPage() {
           </Card>
         )}
 
-        {(isLoading || authIsLoading) && !weatherData && (
-          <div className="flex flex-col items-center justify-center text-center p-10 rounded-lg bg-background/80 backdrop-blur-sm shadow-xl text-card-foreground">
+        {(isLoading || authIsLoading) && !weatherData && ( // Show loading spinner if initial data or auth is loading
+          <div className="flex flex-col items-center justify-center text-center p-10 rounded-lg bg-card/80 backdrop-blur-sm shadow-xl text-card-foreground">
             <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
             <p className="text-xl font-semibold">{authIsLoading ? "Authenticating..." : "Fetching weather data..."}</p>
             <p className="text-muted-foreground">Please wait a moment.</p>
           </div>
         )}
 
-        {error && !isLoading && !authIsLoading && (
+        {error && !isLoading && !authIsLoading && ( // Show error message if loading is finished and error exists
           <div className="text-center p-10 rounded-lg bg-destructive/20 backdrop-blur-sm shadow-xl border border-destructive">
             <ShieldAlert className="h-16 w-16 text-destructive mx-auto mb-4" />
             <p className="text-xl font-semibold text-destructive-foreground">Oops! Something went wrong.</p>
@@ -393,7 +418,7 @@ export default function WeatherPage() {
           </div>
         )}
 
-        {!isLoading && !authIsLoading && weatherData && (
+        {!isLoading && !authIsLoading && weatherData && ( // Show weather display if not loading and data exists
           <WeatherDisplay
             weatherData={weatherData}
             selectedForecastDay={selectedForecastDay}
@@ -401,8 +426,9 @@ export default function WeatherPage() {
           />
         )}
 
+        {/* Initial placeholder before any search, if not loading and no data/error */}
         {!isLoading && !authIsLoading && !weatherData && !error && (
-            <div className="text-center p-10 rounded-lg bg-background/80 backdrop-blur-sm shadow-xl text-card-foreground">
+            <div className="text-center p-10 rounded-lg bg-card/80 backdrop-blur-sm shadow-xl text-card-foreground">
                 <p className="text-xl">Welcome to WeatherEyes!</p>
                 <p className="text-muted-foreground">Enter a location to get started or use your current location.</p>
                 {!user && <p className="text-muted-foreground mt-2">Consider <Link href="/login" className="underline text-primary hover:text-accent">logging in</Link> or <Link href="/signup" className="underline text-primary hover:text-accent">signing up</Link> to save your searches!</p>}

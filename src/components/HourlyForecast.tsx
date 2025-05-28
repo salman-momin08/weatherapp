@@ -21,10 +21,10 @@ export function HourlyForecast({ data, displayForDate }: HourlyForecastProps) {
   const title = `Hourly Forecast ${displayForDate ? `for ${displayForDate}` : ''}`;
 
   return (
-    <Card className="w-full max-w-3xl mx-auto shadow-xl bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm text-card-foreground">
+    <Card className="w-full max-w-3xl mx-auto shadow-xl bg-card text-card-foreground"> {/* White card */}
       <CardHeader>
-        <CardTitle className="text-2xl flex items-center justify-center text-card-foreground"> {/* Ensure title text uses card-foreground */}
-          <Clock className="mr-2 text-card-foreground" /> {title} {/* Icon uses card-foreground */}
+        <CardTitle className="text-2xl flex items-center justify-center">
+          <Clock className="mr-2 text-primary" /> {title} {/* Primary color for icon */}
         </CardTitle>
       </CardHeader>
       <CardContent>

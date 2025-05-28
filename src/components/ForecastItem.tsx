@@ -20,8 +20,8 @@ export function ForecastItem({ data, onClick, isSelected }: ForecastItemProps) {
       className={cn(
         "flex-shrink-0 w-36 text-center shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer",
         "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-        "bg-gradient-to-br from-primary/70 to-background/60 backdrop-blur-sm text-card-foreground", // Gradient background, using card-foreground for text
-        isSelected && "ring-2 ring-card-foreground border-card-foreground" // Selection ring uses card-foreground
+        "bg-card text-card-foreground", // Default white card
+        isSelected && "ring-2 ring-accent border-accent" // Accent ring for selection
       )}
       role="button"
       tabIndex={0}
@@ -31,14 +31,14 @@ export function ForecastItem({ data, onClick, isSelected }: ForecastItemProps) {
     >
       <CardHeader className="p-3 pb-1">
         <CardTitle className="text-sm font-medium">{data.date.split(',')[0]}</CardTitle>
-        <CardDescription className="text-xs text-card-foreground/80">{data.date.substring(data.date.indexOf(',') + 2)}</CardDescription>
+        <CardDescription className="text-xs text-muted-foreground">{data.date.substring(data.date.indexOf(',') + 2)}</CardDescription>
       </CardHeader>
       <CardContent className="p-3 pt-1 flex flex-col items-center">
         <div className="my-2">
-          {getWeatherIcon(data.icon, { size: 36, className: "text-card-foreground" })} {/* Icon color updated */}
+          {getWeatherIcon(data.icon, { size: 36, className: "text-primary" })} {/* Primary color for icon */}
         </div>
         <p className="text-lg font-semibold">{Math.round(data.temp_high)}° / {Math.round(data.temp_low)}°</p>
-        <p className="text-xs capitalize text-card-foreground/80 mt-1 h-8 overflow-hidden text-ellipsis">{data.description}</p>
+        <p className="text-xs capitalize text-muted-foreground mt-1 h-8 overflow-hidden text-ellipsis">{data.description}</p>
       </CardContent>
     </Card>
   );

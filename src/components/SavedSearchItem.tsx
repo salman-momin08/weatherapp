@@ -34,48 +34,48 @@ export function SavedSearchItem({ search, onView, onDelete, onEdit, isDeleting, 
   const anyOperationInProgress = isDeleting || isEditing;
 
   return (
-    <Card className="shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm text-card-foreground">
+    <Card className="shadow-lg hover:shadow-xl transition-shadow bg-card text-card-foreground"> {/* White card */}
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-xl flex items-center text-card-foreground"> {/* Ensure text uses card-foreground */}
-              <MapPin className="mr-2 h-5 w-5 text-card-foreground" /> {/* Icon uses card-foreground */}
+            <CardTitle className="text-xl flex items-center">
+              <MapPin className="mr-2 h-5 w-5 text-primary" /> {/* Primary color for icon */}
               {locationName}
             </CardTitle>
-            <CardDescription className="text-card-foreground/80"> {/* Description uses card-foreground */}
+            <CardDescription className="text-muted-foreground">
               Saved: {new Date(createdAt).toLocaleDateString()} {new Date(createdAt).toLocaleTimeString()}
               {search.updatedAt && new Date(search.updatedAt).getTime() !== new Date(search.createdAt).getTime() && (
                 <span className="block text-xs">Updated: {new Date(search.updatedAt).toLocaleDateString()} {new Date(search.updatedAt).toLocaleTimeString()}</span>
               )}
             </CardDescription>
           </div>
-          <div className="flex items-center text-card-foreground"> {/* Icon parent uses card-foreground */}
+          <div className="flex items-center text-primary"> {/* Primary color for icon */}
             {getWeatherIcon(currentSnapshot.icon, { size: 32 })}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 text-card-foreground"> {/* Ensure content text uses card-foreground */}
+      <CardContent className="space-y-2">
         <div className="flex items-center text-lg">
-          <Thermometer className="mr-2 h-5 w-5 text-card-foreground/80" /> {/* Icon uses card-foreground */}
+          <Thermometer className="mr-2 h-5 w-5 text-muted-foreground" />
           Temperature: {currentSnapshot.temperature}°C
         </div>
-        <p className="text-sm text-card-foreground/80 capitalize">
+        <p className="text-sm text-muted-foreground capitalize">
           {currentSnapshot.description}
         </p>
         {weatherSnapshot.aqi && (
-          <p className="text-sm text-card-foreground/80">
+          <p className="text-sm text-muted-foreground">
             AQI: {weatherSnapshot.aqi.value} ({weatherSnapshot.aqi.category})
           </p>
         )}
       </CardContent>
       <CardFooter className="flex justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={handleEdit} aria-label="Edit search" disabled={anyOperationInProgress} className="bg-background/30 text-foreground hover:bg-background/50">
+        <Button variant="outline" size="sm" onClick={handleEdit} aria-label="Edit search" disabled={anyOperationInProgress}>
           <Edit3 className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="sm" onClick={handleDelete} aria-label="Delete search" disabled={anyOperationInProgress} className="bg-background/30 text-foreground hover:bg-background/50">
+        <Button variant="outline" size="sm" onClick={handleDelete} aria-label="Delete search" disabled={anyOperationInProgress}>
           <Trash2 className="h-4 w-4" />
         </Button>
-        <Button size="sm" onClick={() => onView(search)} aria-label="View search details" disabled={anyOperationInProgress} className="bg-primary-foreground text-primary hover:bg-primary-foreground/80">
+        <Button size="sm" onClick={() => onView(search)} aria-label="View search details" disabled={anyOperationInProgress}>
           <Eye className="mr-1.5 h-4 w-4" /> View / Load
         </Button>
       </CardFooter>
