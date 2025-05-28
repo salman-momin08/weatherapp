@@ -1,7 +1,7 @@
 // src/lib/mongodb.ts
 import { MongoClient, type Db, type Collection } from 'mongodb';
 import type { SavedSearch } from '@/types/savedSearch';
-import type { MongoUser } from '@/types/user'; // Added MongoUser type
+import type { MongoUser } from '@/types/user'; // This type might be unused now
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
@@ -9,6 +9,7 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 const options = {};
+const DB_NAME = 'WeatherEyesDB'; // Explicitly define the database name
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
@@ -32,7 +33,7 @@ if (process.env.NODE_ENV === 'development') {
 
 export async function getDb(): Promise<Db> {
   const mongoClient = await clientPromise;
-  return mongoClient.db(); // You can specify your DB name here if it's not in the URI, e.g., mongoClient.db("WeatherEyesDB");
+  return mongoClient.db(DB_NAME); // Use the explicitly defined database name
 }
 
 export async function getSavedSearchesCollection(): Promise<Collection<SavedSearch>> {
@@ -40,6 +41,8 @@ export async function getSavedSearchesCollection(): Promise<Collection<SavedSear
   return db.collection<SavedSearch>('savedSearches');
 }
 
+// This function and the MongoUser type are likely remnants from the Firebase user sync.
+// The 'users' collection is not actively used by the current global saved search feature.
 export async function getUsersCollection(): Promise<Collection<MongoUser>> {
   const db = await getDb();
   return db.collection<MongoUser>('users');
