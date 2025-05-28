@@ -1,5 +1,1 @@
-# Firebase Studio
-
-This is a NextJS starter in Firebase Studio.
-
-To get started, take a look at src/app/page.tsx.
+The project WeatherEyes is engineered using the NextJS and Typescript. Used the OpenWeatherMap API for the real-time data integration. And used the Genkit AI for generating the random background images based on the current climate of the place. JWT is used for authentication of the users. MongoDB is used for storing the user data.

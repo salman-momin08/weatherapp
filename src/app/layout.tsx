@@ -13,6 +13,12 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'WeatherEyes',
   description: 'Real-time weather forecasts, AI scenes, and saved searches.',
+  icons: {
+    icon: '/favicon.ico', // Assumes src/app/favicon.ico exists
+    apple: '/apple-icon.png', // Assumes src/app/apple-icon.png exists for Apple devices
+    // You can add other icon types here if needed, e.g., for different sizes or shortcut icons
+    // shortcut: '/shortcut-icon.png', 
+  },
 };
 
 export default function RootLayout({
