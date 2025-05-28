@@ -30,7 +30,7 @@ export function AuthDisplay() {
             asChild
             aria-label="About WeatherEyes App"
           >
-            <a href="https://github.com/FirebaseExtended/studio-examples/tree/main/weather-eyes-genkit" className="group" target="_blank" rel="noopener noreferrer">
+            <a href="https://www.linkedin.com/in/drnancyli/" className="group" target="_blank" rel="noopener noreferrer">
               <Info className="h-6 w-6 text-accent group-hover:text-accent-foreground transition-colors" />
             </a>
         </Button>

@@ -448,10 +448,10 @@ export default function WeatherPage() {
           Developed by khwajamainuddin.
         </p>
         <div className="flex justify-center space-x-4 mt-2">
-            <a href="https://github.com/FirebaseExtended/studio-examples/tree/main/weather-eyes-genkit" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" className="group">
+            <a href="https://github.com/salman-momin08/" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" className="group">
                 <Github className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
             </a>
-            <a href="https://www.linkedin.com/company/product-manager-accelerator/" target="_blank" rel="noopener noreferrer" aria-label="Product Manager Accelerator LinkedIn" className="group">
+            <a href="https://www.linkedin.com/in/khwajamainuddin-momin-9b406921b/" target="_blank" rel="noopener noreferrer" aria-label="Product Manager Accelerator LinkedIn" className="group">
                 <Linkedin className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
             </a>
         </div>
