@@ -1,10 +1,10 @@
 import type {Metadata} from 'next';
-import { GeistSans } from 'next/font/google'; // Corrected import for GeistSans
+import { Inter } from 'next/font/google'; // Changed from GeistSans to Inter
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster"; // Added Toaster
+import { Toaster } from "@/components/ui/toaster";
 
-const geistSans = GeistSans({ // Used GeistSans directly
-  variable: '--font-geist-sans',
+const inter = Inter({ // Changed from GeistSans to Inter and updated const name
+  variable: '--font-sans', // Using a generic variable name --font-sans
   subsets: ['latin'],
 });
 
@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} font-sans antialiased`}> {/* Ensured font-sans is applied */}
+      <body className={`${inter.variable} font-sans antialiased`}> {/* Use the new inter.variable and kept font-sans for Tailwind compatibility */}
         {children}
         <Toaster />
       </body>
