@@ -46,8 +46,19 @@ export default function WeatherPage() {
         setWeatherData(weather.value);
       } else {
         console.error("Weather fetch error:", weather.reason);
-        const errorMessage = weather.reason instanceof Error ? weather.reason.message : "Failed to fetch weather data.";
-        setError(errorMessage); // Use the specific error message from the action
+        // Check if the reason is an Error and has a message
+        let errorMessage = "Failed to fetch weather data.";
+        if (weather.reason instanceof Error && weather.reason.message) {
+            // Check for specific user-friendly messages from the action
+            if (weather.reason.message.startsWith("Could not fetch weather: Location not found") ||
+                weather.reason.message.startsWith("Could not fetch weather: Failed to geocode location: Invalid API key") ||
+                weather.reason.message.includes("requires a separate subscription")) {
+                errorMessage = weather.reason.message.replace("Could not fetch weather: ", ""); // Make it more direct
+            } else {
+                errorMessage = weather.reason.message;
+            }
+        }
+        setError(errorMessage);
         toast({
           title: "Error",
           description: errorMessage,
@@ -87,7 +98,7 @@ export default function WeatherPage() {
 
 
   const handleSearch = (searchLocation: string) => {
-    setLocation(searchLocation); // Update current location state if needed
+    setLocation(searchLocation); 
     fetchWeatherAndScene(searchLocation);
   };
 
@@ -102,7 +113,6 @@ export default function WeatherPage() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const locationString = `coords:${position.coords.latitude},${position.coords.longitude}`;
-        // setLocation(locationString); // Update current location state if needed, or let fetchWeatherAndScene handle it
         fetchWeatherAndScene(locationString); 
       },
       (err) => {
@@ -138,8 +148,8 @@ export default function WeatherPage() {
             asChild
             aria-label="Product Manager Accelerator LinkedIn Page"
           >
-            <a href="https://www.linkedin.com/company/product-manager-accelerator/" target="_blank" rel="noopener noreferrer">
-              <Info className="h-6 w-6 text-accent" />
+            <a href="https://www.linkedin.com/company/product-manager-accelerator/" className="group" target="_blank" rel="noopener noreferrer">
+              <Info className="h-6 w-6 text-accent group-hover:text-accent-foreground" />
             </a>
           </Button>
         </div>
