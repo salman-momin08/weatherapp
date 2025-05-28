@@ -164,6 +164,18 @@ const getAQICategoryFromOWM = (aqiValue: number): string => {
   return "Unknown";
 };
 
+const getDeterministicAQIScaledValue = (owmAqi: number): number => {
+    switch (owmAqi) {
+        case 1: return 25;  // Good (0-50)
+        case 2: return 75;  // Fair/Moderate (51-100)
+        case 3: return 125; // Moderate/Unhealthy for Sensitive (101-150)
+        case 4: return 175; // Poor/Unhealthy (151-200)
+        case 5: return 250; // Very Poor/Very Unhealthy (201-300)
+        default: return 0; // Unknown
+    }
+};
+
+
 const getIANATimezoneFromOffset = (offsetSeconds: number): string | undefined => {
     // This function is a placeholder. For accurate IANA timezone names from offsets,
     // a comprehensive library would be needed. OpenWeatherMap's free tier might not
@@ -315,6 +327,9 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
       }));
 
       // For daily AQI, use the general current AQI as free forecast doesn't provide daily AQI.
+      // OWM free forecast doesn't provide daily AQI. We'll use the general current AQI for all forecast days,
+      // or you could fetch historical AQI if the API supports it for specific dates (likely paid).
+      // For this implementation, we'll re-use the current AQI fetched in step 4 for simplicity for forecast days.
       const dayAqiData = owmAqiData ? transformOwAqiData(owmAqiData, representativeItem.dt, cityTimezoneOffsetSeconds) : undefined;
 
       const forecastDate = new Date(representativeItem.dt * 1000 + cityTimezoneOffsetSeconds * 1000);
@@ -325,7 +340,7 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
         temp_low: Math.round(temp_min),
         description: representativeItem.weather[0]?.description || 'N/A',
         icon: mapOwmIconToAppIcon(representativeItem.weather[0]?.icon),
-        aqi: dayAqiData, // This will be the same general AQI for all forecast days
+        aqi: dayAqiData, 
         hourlyForecast: dailyHourlyForecast,
       };
     });
@@ -368,23 +383,38 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
 }
 
 function transformOwAqiData(owmAqiData: OWMAirPollutionData, dt: number, timezoneOffsetSeconds: number): AQIData {
-    // OWM AQI scale: 1 (Good) to 5 (Very Poor).
-    // We map OWM's category text based on their numeric value.
-    const scaledAqiValue = owmAqiData.main.aqi * 20 + Math.floor(Math.random() * 19); // Rough scaling for display
+    const scaledAqiValue = getDeterministicAQIScaledValue(owmAqiData.main.aqi);
     
-    // Determine dominant pollutant (simplified example)
     let dominantPollutant: string | undefined = undefined;
+    // Simplified dominant pollutant check (you may want a more sophisticated system)
+    // This check is basic and doesn't account for varying health impact thresholds of pollutants.
     if (owmAqiData.main.aqi > 2) { // If AQI is moderate or worse, try to identify a dominant pollutant
         const components = owmAqiData.components;
-        // This is a very basic way to determine dominant pollutant, real calculation is complex
-        if (components.pm2_5 > 50) dominantPollutant = "PM2.5";
-        else if (components.o3 > 100) dominantPollutant = "O3";
-        else if (components.no2 > 100) dominantPollutant = "NO2";
-        else if (components.pm10 > 50) dominantPollutant = "PM10";
-        // Fallback if no single pollutant stands out by these arbitrary thresholds
-        else dominantPollutant = ['PM2.5', 'O3', 'NO2', 'PM10', 'SO2', 'CO'][Math.floor(Math.random() * 6)];
-    }
+        const pollutantLevels = [
+            { name: "PM2.5", value: components.pm2_5, threshold: 35 }, // Example threshold
+            { name: "O3", value: components.o3, threshold: 100 },    // Example threshold
+            { name: "NO2", value: components.no2, threshold: 100 },   // Example threshold
+            { name: "PM10", value: components.pm10, threshold: 50 },  // Example threshold
+            { name: "SO2", value: components.so2, threshold: 75 },   // Example threshold
+            { name: "CO", value: components.co / 1000, threshold: 9 } // CO in ppm, example threshold for mg/m3
+        ];
 
+        let maxPollutantRatio = 0;
+        let potentialDominant: string | undefined = undefined;
+
+        // Find pollutant with highest ratio to a simplified threshold
+        // This is a heuristic and not a standard method for dominant pollutant calculation.
+        for (const p of pollutantLevels) {
+            if (p.value > 0 && p.threshold > 0) {
+                const ratio = p.value / p.threshold;
+                if (ratio > maxPollutantRatio && ratio > 1) { // Consider it if it's above its "significant" threshold
+                    maxPollutantRatio = ratio;
+                    potentialDominant = p.name;
+                }
+            }
+        }
+        dominantPollutant = potentialDominant;
+    }
 
     return {
         value: scaledAqiValue, 
@@ -396,8 +426,8 @@ function transformOwAqiData(owmAqiData: OWMAirPollutionData, dt: number, timezon
           { name: "O3", value: parseFloat(owmAqiData.components.o3.toFixed(1)), unit: "µg/m³" },
           { name: "NO2", value: parseFloat(owmAqiData.components.no2.toFixed(1)), unit: "µg/m³" },
           { name: "SO2", value: parseFloat(owmAqiData.components.so2.toFixed(1)), unit: "µg/m³" },
-          { name: "CO", value: parseFloat((owmAqiData.components.co / 1000).toFixed(1)), unit: "mg/m³" }, 
-        ].filter(p => p.value > 0 || p.value === 0),
+          { name: "CO", value: parseFloat((owmAqiData.components.co / 1000).toFixed(1)), unit: "mg/m³" }, // Convert CO from µg/m³ to mg/m³ for common display
+        ].filter(p => p.value > 0 || p.value === 0), // Keep pollutants even if value is 0 for consistency
       };
 }
     
