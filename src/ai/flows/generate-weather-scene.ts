@@ -44,7 +44,9 @@ const generateWeatherSceneFlow = ai.defineFlow(
 
     try {
       console.log("Attempting image generation with prompt:", promptText);
-      const {media} = await ai.generate({
+      
+      // Store the whole result from ai.generate first for better logging
+      const generationResult = await ai.generate({
         model: modelUsed,
         prompt: promptText,
         config: {
@@ -58,19 +60,26 @@ const generateWeatherSceneFlow = ai.defineFlow(
         },
       });
 
-      console.log("Raw image generation result:", JSON.stringify(media, null, 2));
+      console.log("Full image generation API result:", JSON.stringify(generationResult, null, 2));
 
+      const media = generationResult.media; // Now access media from the full result
 
       if (media && media.url) {
         imageUri = media.url;
         reliability = 'Experimental'; // Since it's AI, reliability is often experimental
         console.log("Image generated successfully:", imageUri.substring(0,100) + "...");
       } else {
-        console.warn("Image generation did not return a media object with a URL.");
+        console.warn("Image generation did not return a usable media object with a URL. Media object found in result:", JSON.stringify(media, null, 2));
         reliability = 'Unavailable';
       }
     } catch (error) {
-      console.error("Error during image generation flow:", error);
+      console.error("Error during image generation flow (ai.generate call or subsequent processing):", error);
+      if (error && typeof error === 'object' && 'message' in error) {
+        console.error("Specific error message:", (error as Error).message);
+      }
+      if (error && typeof error === 'object' && 'stack' in error) {
+        console.error("Error stack:", (error as Error).stack);
+      }
       reliability = 'Unavailable';
     }
 
@@ -82,3 +91,4 @@ const generateWeatherSceneFlow = ai.defineFlow(
     };
   }
 );
+
