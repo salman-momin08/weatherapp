@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { LocationInput } from '@/components/LocationInput';
 import { WeatherDisplay } from '@/components/WeatherDisplay';
-import type { WeatherData, AIWeatherScene } from '@/types/weather';
+import type { WeatherData, AIWeatherScene, ForecastDayData } from '@/types/weather';
 import { getMockWeatherData } from '@/lib/weather-utils';
 import { generateWeatherScene, type GenerateWeatherSceneInput } from '@/ai/flows/generate-weather-scene';
 import { Info, Github, Linkedin, Loader2, ShieldAlert } from 'lucide-react';
@@ -20,14 +20,14 @@ export default function WeatherPage() {
   const [aiScene, setAiScene] = useState<AIWeatherScene | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedForecastDay, setSelectedForecastDay] = useState<ForecastDayData | null>(null);
   const { toast } = useToast();
 
   const fetchWeatherAndScene = useCallback(async (loc: string) => {
     setIsLoading(true);
     setError(null);
-    setWeatherData(null); // Clear previous weather data
-    // Do not clear aiScene immediately to avoid background flickering if new scene fails
-    // setAiScene(null); 
+    setWeatherData(null); 
+    setSelectedForecastDay(null); // Reset selected day on new location search
 
     try {
       const weatherPromise = getMockWeatherData(loc);
@@ -37,6 +37,11 @@ export default function WeatherPage() {
 
       if (weather.status === 'fulfilled') {
         setWeatherData(weather.value);
+        // By default, select "Today's" forecast data if available (which is the first item)
+        if (weather.value && weather.value.forecast && weather.value.forecast.length > 0) {
+          // No, we want current day's AQI/Hourly by default, not necessarily selecting the first forecast card.
+          // setSelectedForecastDay(weather.value.forecast[0]); 
+        }
       } else {
         console.error("Weather fetch error:", weather.reason);
         setError("Could not fetch weather data. Please try again.");
@@ -51,9 +56,6 @@ export default function WeatherPage() {
          setAiScene({ imageUri: sceneData.value.imageUri, reliability: sceneData.value.reliability });
       } else {
         console.error("AI Scene generation error:", sceneData.status === 'rejected' ? sceneData.reason : "No image URI");
-        // Keep old scene or set a default if this is critical, here we just log and potentially show no new background
-        // If keeping old scene is not desired, uncomment:
-        // setAiScene(null); 
         toast({
           title: "AI Background",
           description: "Could not generate a new weather scene. Previous background may remain or default will be used.",
@@ -76,7 +78,6 @@ export default function WeatherPage() {
   }, [toast]);
 
   useEffect(() => {
-    // Fetch data for default location on initial load
     fetchWeatherAndScene(DEFAULT_LOCATION);
   }, [fetchWeatherAndScene]);
 
@@ -96,13 +97,11 @@ export default function WeatherPage() {
     setIsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        // For simplicity, we'll use a placeholder city name.
-        // A real app would use reverse geocoding here.
         const cityFromCoords = "Current Location (Simulated)"; 
         const locationString = `coords:${position.coords.latitude},${position.coords.longitude}`;
-        setLocation(cityFromCoords); // Update displayed location name
-        fetchWeatherAndScene(cityFromCoords); // Fetch using the simulated city name for the AI prompt
-        console.log(locationString); // coords can be used for more precise weather fetching if API supports it
+        setLocation(cityFromCoords); 
+        fetchWeatherAndScene(cityFromCoords); 
+        console.log(locationString); 
       },
       (err) => {
         setError(`Geolocation error: ${err.message}`);
@@ -112,13 +111,21 @@ export default function WeatherPage() {
     );
   };
 
+  const handleForecastDaySelect = (day: ForecastDayData | null) => {
+    if (selectedForecastDay?.date === day?.date) {
+      setSelectedForecastDay(null); // Deselect if clicking the same day again
+    } else {
+      setSelectedForecastDay(day);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col transition-all duration-1000 ease-in-out" 
          style={{ 
            backgroundImage: aiScene?.imageUri ? `url(${aiScene.imageUri})` : 'linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--background)))',
            backgroundSize: 'cover',
            backgroundPosition: 'center',
-           backgroundAttachment: 'fixed' // Keep background fixed during scroll
+           backgroundAttachment: 'fixed' 
          }}>
       <header className="p-4 bg-background/70 backdrop-blur-md shadow-md sticky top-0 z-50">
         <div className="container mx-auto flex justify-between items-center">
@@ -139,7 +146,7 @@ export default function WeatherPage() {
       <main className="flex-grow container mx-auto p-4 md:p-8 flex flex-col items-center justify-center">
         <LocationInput onSearch={handleSearch} onGeolocate={handleGeolocate} isLoading={isLoading} />
 
-        {isLoading && !weatherData && ( // Show full page loader only if no data is yet shown
+        {isLoading && !weatherData && (
           <div className="flex flex-col items-center justify-center text-center p-10 rounded-lg bg-card/80 backdrop-blur-sm shadow-xl">
             <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
             <p className="text-xl font-semibold">Fetching weather data...</p>
@@ -159,10 +166,14 @@ export default function WeatherPage() {
         )}
 
         {!isLoading && weatherData && (
-          <WeatherDisplay weatherData={weatherData} aiScene={aiScene} />
+          <WeatherDisplay 
+            weatherData={weatherData} 
+            aiScene={aiScene}
+            selectedForecastDay={selectedForecastDay}
+            onForecastDaySelect={handleForecastDaySelect}
+          />
         )}
         
-        {/* Fallback content if nothing else renders, though covered by loading/error/data states */}
         {!isLoading && !weatherData && !error && (
             <div className="text-center p-10 rounded-lg bg-card/80 backdrop-blur-sm shadow-xl">
                 <p className="text-xl">Welcome to WeatherEyes!</p>
@@ -187,4 +198,3 @@ export default function WeatherPage() {
     </div>
   );
 }
-

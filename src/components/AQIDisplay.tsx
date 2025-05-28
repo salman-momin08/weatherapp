@@ -1,4 +1,3 @@
-
 // src/components/AQIDisplay.tsx
 "use client";
 
@@ -9,6 +8,7 @@ import { Leaf, AlertTriangle } from 'lucide-react';
 
 interface AQIDisplayProps {
   data: AQIData;
+  displayForDate?: string; // e.g., "Today", "Tomorrow", "Mon, Jul 22"
 }
 
 const getAQIColorClass = (category: string): string => {
@@ -24,18 +24,19 @@ const getAQIColorClass = (category: string): string => {
     case "very unhealthy":
       return "bg-purple-500 hover:bg-purple-500";
     case "hazardous":
-      return "bg-maroon-500 hover:bg-maroon-500"; // Custom color or a very dark red
+      return "bg-maroon-500 hover:bg-maroon-500"; // Consider defining maroon in tailwind.config.js if needed
     default:
       return "bg-gray-500 hover:bg-gray-500";
   }
 };
 
-export function AQIDisplay({ data }: AQIDisplayProps) {
+export function AQIDisplay({ data, displayForDate }: AQIDisplayProps) {
+  const title = `Air Quality Index (AQI) ${displayForDate ? `for ${displayForDate}` : ''}`;
   return (
     <Card className="w-full max-w-md mx-auto shadow-xl bg-card/80 backdrop-blur-sm">
       <CardHeader className="pb-2 text-center">
         <CardTitle className="text-2xl flex items-center justify-center">
-          <Leaf className="mr-2 text-primary" /> Air Quality Index (AQI)
+          <Leaf className="mr-2 text-primary" /> {title}
         </CardTitle>
         {data.dominantPollutant && (
           <CardDescription className="text-sm">
@@ -51,17 +52,19 @@ export function AQIDisplay({ data }: AQIDisplayProps) {
           <p className="text-lg font-semibold mt-2">{data.category}</p>
         </div>
         
-        <div className="w-full text-sm mb-4">
-          <h4 className="font-semibold mb-2 text-center text-muted-foreground">Pollutant Details:</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {data.pollutants.map((pollutant) => (
-              <div key={pollutant.name} className="p-3 bg-background/50 rounded-md text-center">
-                <p className="font-medium">{pollutant.name}</p>
-                <p className="text-muted-foreground">{pollutant.value} {pollutant.unit}</p>
-              </div>
-            ))}
+        {data.pollutants && data.pollutants.length > 0 && (
+          <div className="w-full text-sm mb-4">
+            <h4 className="font-semibold mb-2 text-center text-muted-foreground">Pollutant Details:</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {data.pollutants.map((pollutant) => (
+                <div key={pollutant.name} className="p-3 bg-background/50 rounded-md text-center">
+                  <p className="font-medium">{pollutant.name}</p>
+                  <p className="text-muted-foreground">{pollutant.value} {pollutant.unit}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {data.value > 100 && (
            <Badge variant="outline" className="mt-2 p-2 text-xs text-center w-full bg-yellow-100/50 dark:bg-yellow-800/30 border-yellow-500/70 text-yellow-700 dark:text-yellow-300">

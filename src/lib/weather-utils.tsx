@@ -15,26 +15,59 @@ const getAQICategory = (aqiValue: number): string => {
   return "Hazardous";
 };
 
+// Helper to generate mock AQI data for a given base value
+const generateMockAQI = (baseAqiValue: number): AQIData => {
+  const aqiValue = Math.max(10, Math.min(500, Math.floor(baseAqiValue + (Math.random() * 50) - 25))); // Ensure AQI is within a reasonable range
+  return {
+    value: aqiValue,
+    category: getAQICategory(aqiValue),
+    dominantPollutant: ["PM2.5", "O3", "PM10"][Math.floor(Math.random() * 3)],
+    pollutants: [
+      { name: "PM2.5", value: Math.max(0, Math.round(aqiValue * (0.6 + Math.random() * 0.4))), unit: "µg/m³" },
+      { name: "PM10", value: Math.max(0, Math.round(aqiValue * (0.8 + Math.random() * 0.4))), unit: "µg/m³" },
+      { name: "O3", value: Math.max(0, Math.round(aqiValue * (0.3 + Math.random() * 0.4))), unit: "ppb" },
+      { name: "NO2", value: Math.max(0, Math.round(aqiValue * (0.2 + Math.random() * 0.2))), unit: "ppb" },
+      { name: "SO2", value: Math.max(0, Math.round(aqiValue * (0.1 + Math.random() * 0.2))), unit: "ppb" },
+      { name: "CO", value: Math.max(0, Math.round(aqiValue * (0.05 + Math.random() * 0.1))), unit: "ppm" },
+    ].filter(p => p.value > 0), // Filter out pollutants with 0 value for cleaner display
+  };
+};
+
+// Helper to generate mock hourly forecast data
+const generateMockHourlyForecast = (baseTemp: number, conditions: string[], icons: string[]): HourlyForecastData[] => {
+  const hourly: HourlyForecastData[] = [];
+  const currentHour = new Date().getHours(); // For a future day, this would typically start from 0 or relevant hour
+  for (let i = 0; i < 12; i++) { // Generate 12 hours of forecast data
+    const hour = (currentHour + i) % 24; // Simplified for mock; real API would give specific hours for the day
+    const hourRandomIndex = Math.floor(Math.random() * conditions.length);
+    hourly.push({
+      time: `${hour.toString().padStart(2, '0')}:00`,
+      temperature: Math.round(baseTemp + Math.floor(Math.random() * 6) - 3), // Temperature variation throughout the day
+      description: conditions[hourRandomIndex],
+      icon: icons[hourRandomIndex],
+    });
+  }
+  return hourly;
+};
+
+
 // Mock function to simulate fetching weather data
 export const getMockWeatherData = async (location: string): Promise<WeatherData> => {
   // Simulate API call delay
   await new Promise(resolve => setTimeout(resolve, 1000));
 
-  // Simple logic to vary data based on location string length for variety
   const baseTemp = 15 + (location.length % 15); // Base temperature between 15 and 29
-
-  const weatherConditions = ['Sunny', 'Cloudy', 'Rainy', 'Partly Cloudy', 'Thunderstorm', 'Snowy', 'Foggy', 'Drizzle'];
-  const icons = ['Sun', 'Cloud', 'CloudRain', 'CloudSun', 'CloudLightning', 'CloudSnow', 'CloudFog', 'CloudDrizzle'];
+  const weatherConditions = ['Sunny', 'Cloudy', 'Rainy', 'Partly Cloudy', 'Thunderstorm', 'Snowy', 'Foggy', 'Drizzle', 'Clear'];
+  const icons = ['Sun', 'Cloud', 'CloudRain', 'CloudSun', 'CloudLightning', 'CloudSnow', 'CloudFog', 'CloudDrizzle', 'Sun']; // Added Clear mapping to Sun for simplicity
   
-  const randomIndex = Math.floor(Math.random() * weatherConditions.length);
-
+  const currentRandomIndex = Math.floor(Math.random() * weatherConditions.length);
   const current: CurrentWeatherData = {
     locationName: location.startsWith("coords:") ? "Current Location" : location,
-    temperature: baseTemp + Math.floor(Math.random() * 5) - 2, // +/- 2 variation
-    humidity: 50 + (location.length % 30), // Humidity between 50 and 79
-    description: weatherConditions[randomIndex],
-    icon: icons[randomIndex],
-    windSpeed: 5 + (location.length % 10), // Wind speed between 5 and 14 km/h
+    temperature: baseTemp + Math.floor(Math.random() * 5) - 2,
+    humidity: 50 + (location.length % 30),
+    description: weatherConditions[currentRandomIndex],
+    icon: icons[currentRandomIndex],
+    windSpeed: 5 + (location.length % 10),
     feelsLike: baseTemp + Math.floor(Math.random() * 5) - 4,
     timestamp: Date.now() / 1000,
   };
@@ -43,47 +76,32 @@ export const getMockWeatherData = async (location: string): Promise<WeatherData>
   const today = new Date();
   for (let i = 0; i < 7; i++) {
     const forecastDate = new Date(today);
-    forecastDate.setDate(today.getDate() + i + 1); // Daily forecast starts from tomorrow
+    forecastDate.setDate(today.getDate() + i); // Daily forecast, including today as the first item if i=0
+    
+    const dayTempVariation = Math.floor(Math.random() * 5) - 2; // +/- 2 from base
+    const dayBaseTemp = baseTemp + dayTempVariation;
     const dayRandomIndex = Math.floor(Math.random() * weatherConditions.length);
 
     forecast.push({
       date: forecastDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-      temp_high: baseTemp + 5 + Math.floor(Math.random() * 3) - 1,
-      temp_low: baseTemp - 2 + Math.floor(Math.random() * 3) - 1,
+      temp_high: dayBaseTemp + 5 + Math.floor(Math.random() * 3) - 1,
+      temp_low: dayBaseTemp - 2 + Math.floor(Math.random() * 3) - 1,
       description: weatherConditions[dayRandomIndex],
       icon: icons[dayRandomIndex],
+      aqi: generateMockAQI(20 + (location.length % 100) + (i * 5)), // AQI varies slightly per day
+      hourlyForecast: generateMockHourlyForecast(dayBaseTemp, weatherConditions, icons),
     });
   }
 
-  const mockAqiValue = 20 + (location.length % 281); // AQI between 20 and 300
-  const aqi: AQIData = {
-    value: mockAqiValue,
-    category: getAQICategory(mockAqiValue),
-    dominantPollutant: "PM2.5",
-    pollutants: [
-      { name: "PM2.5", value: Math.round(mockAqiValue * 0.8), unit: "µg/m³" },
-      { name: "PM10", value: Math.round(mockAqiValue * 1.2), unit: "µg/m³" },
-      { name: "O3", value: Math.round(mockAqiValue * 0.5), unit: "ppb" },
-      { name: "NO2", value: Math.round(mockAqiValue * 0.3), unit: "ppb" },
-      { name: "SO2", value: Math.round(mockAqiValue * 0.2), unit: "ppb" },
-      { name: "CO", value: Math.round(mockAqiValue * 0.1), unit: "ppm" },
-    ]
+  // Current day's AQI and Hourly from the first item of the forecast (today's data)
+  const currentDayForecast = forecast[0];
+
+  return { 
+    current, 
+    forecast, 
+    aqi: currentDayForecast?.aqi, 
+    hourlyForecast: currentDayForecast?.hourlyForecast 
   };
-
-  const hourlyForecast: HourlyForecastData[] = [];
-  const currentHour = new Date().getHours();
-  for (let i = 0; i < 12; i++) { // Next 12 hours
-    const hour = (currentHour + i + 1) % 24;
-    const hourRandomIndex = Math.floor(Math.random() * weatherConditions.length);
-    hourlyForecast.push({
-      time: `${hour}:00`,
-      temperature: current.temperature + Math.floor(Math.random() * 4) - 2, // slight variation from current
-      description: weatherConditions[hourRandomIndex],
-      icon: icons[hourRandomIndex]
-    });
-  }
-
-  return { current, forecast, aqi, hourlyForecast };
 };
 
 // Helper to get Lucide icon component
@@ -104,9 +122,10 @@ export const getWeatherIcon = (iconName: string, props?: LucideProps): JSX.Eleme
     Eye,
     CalendarDays,
     Clock,
-    Zap, // For thunderstorm, alternative to CloudLightning if needed
-    Leaf, // Generic nature/air quality icon
+    Zap, 
+    Leaf, 
     CloudDrizzle,
+    Clear: Sun, // Map 'Clear' to Sun icon
   };
 
   const IconComponent = iconMap[iconName] || Sun; // Default to Sun icon
@@ -120,4 +139,3 @@ export const formatTimestamp = (timestamp: number): string => {
     minute: '2-digit',
   });
 };
-

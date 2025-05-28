@@ -36,13 +36,15 @@ export interface ForecastDayData {
   temp_low: number;
   description: string;
   icon: string; // Icon code or name
+  aqi?: AQIData; // AQI specific to this forecast day
+  hourlyForecast?: HourlyForecastData[]; // Hourly forecast specific to this day
 }
 
 export interface WeatherData {
   current: CurrentWeatherData;
   forecast: ForecastDayData[];
-  aqi?: AQIData;
-  hourlyForecast?: HourlyForecastData[];
+  aqi?: AQIData; // Current day's AQI
+  hourlyForecast?: HourlyForecastData[]; // Current day's hourly forecast
 }
 
 export interface AIWeatherScene {
