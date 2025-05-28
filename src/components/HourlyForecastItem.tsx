@@ -3,7 +3,7 @@
 "use client";
 
 import type { HourlyForecastData } from '@/types/weather';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Card component might not be needed if we restyle directly
 import { getWeatherIcon } from '@/lib/weather-utils';
 
 interface HourlyForecastItemProps {
@@ -12,21 +12,17 @@ interface HourlyForecastItemProps {
 
 export function HourlyForecastItem({ data }: HourlyForecastItemProps) {
   return (
-    <Card className="flex-shrink-0 w-28 text-center shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-primary/60 to-background/50 backdrop-blur-sm text-primary-foreground">
-      <CardHeader className="p-2 pb-0">
-        <CardTitle className="text-sm font-medium">{data.time}</CardTitle>
-      </CardHeader>
-      <CardContent className="p-2 pt-1 flex flex-col items-center">
-        <div className="my-1">
-          {getWeatherIcon(data.icon, { size: 32, className: "text-white" })} {/* Icon color for visibility */}
-        </div>
-        <p className="text-lg font-semibold">{Math.round(data.temperature)}°C</p>
-        <p className="text-xs capitalize text-primary-foreground/80 mt-1 h-4 overflow-hidden text-ellipsis whitespace-nowrap">
-            {data.description}
-        </p>
-      </CardContent>
-    </Card>
+    // Apply frosted glass effect here
+    <div className="flex-shrink-0 w-28 text-center shadow-md rounded-lg p-2
+                   bg-white/20 backdrop-blur-md border border-white/30 text-foreground">
+      <div className="text-sm font-medium mb-1">{data.time}</div>
+      <div className="my-1">
+        {getWeatherIcon(data.icon, { size: 32, className: "mx-auto" })} {/* Icon inherits text-foreground */}
+      </div>
+      <div className="text-lg font-semibold">{Math.round(data.temperature)}°C</div>
+      <div className="text-xs capitalize mt-1 h-4 overflow-hidden text-ellipsis whitespace-nowrap text-foreground/80">
+        {data.description}
+      </div>
+    </div>
   );
 }
-
-    

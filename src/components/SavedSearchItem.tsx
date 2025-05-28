@@ -5,7 +5,7 @@
 import type { SavedSearch } from '@/types/savedSearch';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Thermometer, CalendarDays, Trash2, Eye, Edit3 } from 'lucide-react'; 
+import { MapPin, Thermometer, Trash2, Eye, Edit3 } from 'lucide-react'; 
 import { getWeatherIcon } from '@/lib/weather-utils';
 
 interface SavedSearchItemProps {
@@ -38,32 +38,32 @@ export function SavedSearchItem({ search, onView, onDelete, onEdit, isDeleting, 
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-xl flex items-center">
-              <MapPin className="mr-2 h-5 w-5 text-primary-foreground" /> {/* Adjusted icon color */}
+            <CardTitle className="text-xl flex items-center text-card-foreground"> {/* Ensure text uses card-foreground */}
+              <MapPin className="mr-2 h-5 w-5 text-card-foreground" /> {/* Icon uses card-foreground */}
               {locationName}
             </CardTitle>
-            <CardDescription className="text-primary-foreground/80"> {/* Adjusted text color */}
+            <CardDescription className="text-card-foreground/80"> {/* Description uses card-foreground */}
               Saved: {new Date(createdAt).toLocaleDateString()} {new Date(createdAt).toLocaleTimeString()}
               {search.updatedAt && new Date(search.updatedAt).getTime() !== new Date(search.createdAt).getTime() && (
                 <span className="block text-xs">Updated: {new Date(search.updatedAt).toLocaleDateString()} {new Date(search.updatedAt).toLocaleTimeString()}</span>
               )}
             </CardDescription>
           </div>
-          <div className="flex items-center text-white"> {/* Adjusted icon color parent */}
+          <div className="flex items-center text-card-foreground"> {/* Icon parent uses card-foreground */}
             {getWeatherIcon(currentSnapshot.icon, { size: 32 })}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 text-card-foreground"> {/* Ensure content text uses card-foreground */}
         <div className="flex items-center text-lg">
-          <Thermometer className="mr-2 h-5 w-5 text-primary-foreground/80" /> {/* Adjusted icon color */}
+          <Thermometer className="mr-2 h-5 w-5 text-card-foreground/80" /> {/* Icon uses card-foreground */}
           Temperature: {currentSnapshot.temperature}°C
         </div>
-        <p className="text-sm text-primary-foreground/80 capitalize"> {/* Adjusted text color */}
+        <p className="text-sm text-card-foreground/80 capitalize">
           {currentSnapshot.description}
         </p>
         {weatherSnapshot.aqi && (
-          <p className="text-sm text-primary-foreground/80"> {/* Adjusted text color */}
+          <p className="text-sm text-card-foreground/80">
             AQI: {weatherSnapshot.aqi.value} ({weatherSnapshot.aqi.category})
           </p>
         )}
@@ -82,5 +82,3 @@ export function SavedSearchItem({ search, onView, onDelete, onEdit, isDeleting, 
     </Card>
   );
 }
-
-    

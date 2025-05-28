@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { LocationInput } from '@/components/LocationInput';
 import { WeatherDisplay } from '@/components/WeatherDisplay';
-import type { WeatherData, ForecastDayData, AIWeatherScene } from '@/types/weather';
+import type { WeatherData, ForecastDayData } from '@/types/weather';
 import type { SavedSearch } from '@/types/savedSearch';
 import { getRealtimeWeatherData } from '@/app/actions/weatherActions';
 import { SavedSearchItem } from '@/components/SavedSearchItem';
@@ -27,7 +27,7 @@ export default function WeatherPage() {
   const [location, setLocation] = useState<string>(DEFAULT_LOCATION);
   const [currentCoords, setCurrentCoords] = useState<{lat: number; lon: number} | null>(null);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-  const [aiSceneImage, setAiSceneImage] = useState<string | null>(null);
+  // Removed aiSceneImage state
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,14 +48,12 @@ export default function WeatherPage() {
     setError(null);
     setSelectedForecastDay(null);
     setCurrentCoords(coords || null);
-    setAiSceneImage(null); // Clear previous AI scene
+    // Removed setAiSceneImage(null);
 
     try {
       const weatherResult = await getRealtimeWeatherData(loc);
       setWeatherData(weatherResult);
-      if (weatherResult.aiScene?.imageUri) {
-        setAiSceneImage(weatherResult.aiScene.imageUri);
-      }
+      // Removed AI Scene logic
     } catch (err) {
       console.error("Error in fetchWeatherAndScene:", err);
       let errorMessage = "Failed to fetch weather data.";
@@ -137,7 +135,7 @@ export default function WeatherPage() {
       (position) => {
         const coords = { lat: position.coords.latitude, lon: position.coords.longitude };
         const locationString = `coords:${coords.lat},${coords.lon}`;
-        setLocation(locationString); // Keep track of the original input type
+        setLocation(locationString);
         fetchWeatherAndScene(locationString, coords);
       },
       (err) => {
@@ -162,12 +160,11 @@ export default function WeatherPage() {
       let latToSave: number | undefined = weatherData.resolvedLat;
       let lonToSave: number | undefined = weatherData.resolvedLon;
 
-      // Fallback if resolvedLat/Lon aren't available directly from weatherData
       if (latToSave === undefined || lonToSave === undefined) {
-        if (currentCoords) { // From geolocation
+        if (currentCoords) {
           latToSave = currentCoords.lat;
           lonToSave = currentCoords.lon;
-        } else if (location.startsWith('coords:')) { // From manual coord input
+        } else if (location.startsWith('coords:')) {
             const parts = location.substring(7).split(',');
             if (parts.length === 2 && !isNaN(parseFloat(parts[0])) && !isNaN(parseFloat(parts[1]))) {
                 latToSave = parseFloat(parts[0]);
@@ -175,7 +172,6 @@ export default function WeatherPage() {
             }
         }
       }
-      // Final check if coordinates are available
       if (latToSave === undefined || lonToSave === undefined) {
           toast({ title: "Cannot Save", description: "Could not determine precise coordinates for this location to save.", variant: "destructive" });
           setIsSaving(false);
@@ -189,8 +185,8 @@ export default function WeatherPage() {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-            weatherData, // Includes current, forecast, aqi, hourly, aiScene
-            locationName: weatherData.current.locationName, // The name resolved by the weather service
+            weatherData,
+            locationName: weatherData.current.locationName,
             latitude: latToSave,
             longitude: lonToSave
         }),
@@ -213,7 +209,7 @@ export default function WeatherPage() {
       }
       const newSavedSearch: SavedSearch = JSON.parse(responseText);
       toast({ title: "Search Saved!", description: `${newSavedSearch.locationName} has been saved.` });
-      fetchSavedSearches(); // Refresh the list
+      fetchSavedSearches();
     } catch (err) {
       console.error("Failed to save search:", err);
       toast({ title: "Error Saving", description: (err as Error).message || "Could not save the search.", variant: "destructive" });
@@ -223,17 +219,12 @@ export default function WeatherPage() {
   };
 
   const handleViewSavedSearch = (savedSearch: SavedSearch) => {
-    setLocation(savedSearch.locationName); // Or original search input if stored
+    setLocation(savedSearch.locationName);
     setWeatherData(savedSearch.weatherSnapshot);
-    // Set currentCoords from the saved search's lat/lon
     setCurrentCoords({lat: savedSearch.latitude, lon: savedSearch.longitude});
-    if (savedSearch.weatherSnapshot.aiScene?.imageUri) {
-      setAiSceneImage(savedSearch.weatherSnapshot.aiScene.imageUri);
-    } else {
-      setAiSceneImage(null);
-    }
-    setShowSavedSearches(false); // Optionally hide the list after loading
-    setSelectedForecastDay(null); // Reset selected forecast day
+    // Removed AI Scene logic related to savedSearch.weatherSnapshot.aiScene
+    setShowSavedSearches(false);
+    setSelectedForecastDay(null);
     toast({ title: "Loaded Saved Search", description: `Displaying weather for ${savedSearch.locationName}.`});
   };
 
@@ -309,12 +300,9 @@ export default function WeatherPage() {
       setSavedSearches(prevSearches =>
         prevSearches.map(s => s._id?.toString() === searchId ? updatedSearch : s)
       );
-      // If the updated search is the one currently displayed, update the main weather display too
-      if (weatherData && weatherData.current.locationName === editingSearch?.locationName) { // A bit fragile check
+      if (weatherData && weatherData.current.locationName === editingSearch?.locationName) {
         setWeatherData(updatedSearch.weatherSnapshot);
-        if (updatedSearch.weatherSnapshot.aiScene?.imageUri) {
-            setAiSceneImage(updatedSearch.weatherSnapshot.aiScene.imageUri);
-        }
+        // Removed AI Scene logic
       }
       return true;
     } catch (err) {
@@ -333,23 +321,19 @@ export default function WeatherPage() {
 
   const anyLoadingState = isLoading || isSaving || authIsLoading || !!isDeletingSearchId || isUpdatingSearch || isLoadingSaved;
   
-  const fallbackGradient = 'linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--background)))';
-
   return (
     <div
-      className="flex flex-col min-h-screen w-full bg-cover bg-center transition-all duration-1000"
-      style={{ 
-        backgroundImage: aiSceneImage ? `url(${aiSceneImage})` : fallbackGradient,
-      }}
+      className="flex flex-col min-h-screen w-full bg-gradient-to-b from-sky-400 to-blue-100 text-foreground overflow-y-auto"
+      // Removed style={{ backgroundImage: ... }}
     >
       <header className="p-4 bg-background/70 backdrop-blur-md shadow-md sticky top-0 z-50">
         <div className="container mx-auto flex justify-between items-center">
-          <Link href="/" className="text-3xl font-bold text-primary">WeatherEyes</Link>
+          <Link href="/" className="text-3xl font-bold text-foreground">WeatherEyes</Link> {/* Changed text-primary to text-foreground */}
           <AuthDisplay />
         </div>
       </header>
 
-      <main className="flex-grow container mx-auto p-4 md:p-8 flex flex-col items-center overflow-y-auto">
+      <main className="flex-grow container mx-auto p-4 md:p-8 flex flex-col items-center"> {/* Removed overflow-y-auto from main as it's on root div */}
         <LocationInput onSearch={handleSearch} onGeolocate={handleGeolocate} isLoading={anyLoadingState} />
 
         {user && !authIsLoading && (
@@ -391,7 +375,7 @@ export default function WeatherPage() {
         )}
 
         {(isLoading || authIsLoading) && !weatherData && (
-          <div className="flex flex-col items-center justify-center text-center p-10 rounded-lg bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm shadow-xl text-card-foreground">
+          <div className="flex flex-col items-center justify-center text-center p-10 rounded-lg bg-background/80 backdrop-blur-sm shadow-xl text-card-foreground">
             <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
             <p className="text-xl font-semibold">{authIsLoading ? "Authenticating..." : "Fetching weather data..."}</p>
             <p className="text-muted-foreground">Please wait a moment.</p>
@@ -418,7 +402,7 @@ export default function WeatherPage() {
         )}
 
         {!isLoading && !authIsLoading && !weatherData && !error && (
-            <div className="text-center p-10 rounded-lg bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm shadow-xl text-card-foreground">
+            <div className="text-center p-10 rounded-lg bg-background/80 backdrop-blur-sm shadow-xl text-card-foreground">
                 <p className="text-xl">Welcome to WeatherEyes!</p>
                 <p className="text-muted-foreground">Enter a location to get started or use your current location.</p>
                 {!user && <p className="text-muted-foreground mt-2">Consider <Link href="/login" className="underline text-primary hover:text-accent">logging in</Link> or <Link href="/signup" className="underline text-primary hover:text-accent">signing up</Link> to save your searches!</p>}
@@ -450,5 +434,3 @@ export default function WeatherPage() {
     </div>
   );
 }
-
-    

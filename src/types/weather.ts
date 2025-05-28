@@ -40,11 +40,7 @@ export interface ForecastDayData {
   hourlyForecast?: HourlyForecastData[]; // Hourly forecast specific to this day
 }
 
-// Added AIWeatherScene type
-export interface AIWeatherScene {
-  imageUri: string | null;
-  reliability: string | null;
-}
+// Removed AIWeatherScene type
 
 export interface WeatherData {
   current: CurrentWeatherData;
@@ -54,5 +50,5 @@ export interface WeatherData {
   timeZone?: string;
   resolvedLat?: number; 
   resolvedLon?: number;
-  aiScene?: AIWeatherScene; // Added aiScene property
+  // Removed aiScene property
 }
