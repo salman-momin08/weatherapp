@@ -122,7 +122,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = () => {
     setUserAndToken(null, null);
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-    router.push('/login');
+    router.push('/'); // Changed from '/login' to '/'
   };
 
   return (
