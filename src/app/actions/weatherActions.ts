@@ -53,13 +53,13 @@ interface OWMCurrentWeatherAPIResponse {
   };
   timezone: number; // Shift in seconds from UTC
   id: number;
-  name: string; 
+  name: string;
   cod: number;
 }
 
 // For /data/2.5/forecast (5 day / 3 hour forecast)
 interface OWMForecastListItem {
-  dt: number; 
+  dt: number;
   main: {
     temp: number;
     feels_like: number;
@@ -79,9 +79,9 @@ interface OWMForecastListItem {
     gust?: number;
   };
   visibility: number;
-  pop: number; 
-  sys: { pod: 'd' | 'n' }; 
-  dt_txt: string; 
+  pop: number;
+  sys: { pod: 'd' | 'n' };
+  dt_txt: string;
 }
 
 interface OWMCity {
@@ -90,15 +90,15 @@ interface OWMCity {
   coord: { lat: number; lon: number };
   country: string;
   population: number;
-  timezone: number; 
-  sunrise: number; 
-  sunset: number;  
+  timezone: number;
+  sunrise: number;
+  sunset: number;
 }
 
 interface OWMForecastAPIResponse {
   cod: string;
   message: number | string;
-  cnt: number; 
+  cnt: number;
   list: OWMForecastListItem[];
   city: OWMCity;
 }
@@ -117,7 +117,7 @@ interface OWMAirPollutionComponent {
 
 interface OWMAirPollutionData {
   main: {
-    aqi: number; 
+    aqi: number;
   };
   components: OWMAirPollutionComponent;
   dt: number;
@@ -131,29 +131,6 @@ interface OWMAirPollutionResponse {
   list: OWMAirPollutionData[];
 }
 
-// --- Interfaces for Google Geocoding API response ---
-interface GoogleGeocodingResult {
-  formatted_address: string;
-  geometry: {
-    location: {
-      lat: number;
-      lng: number;
-    };
-  };
-  address_components: Array<{
-    long_name: string;
-    short_name: string;
-    types: string[];
-  }>;
-}
-
-interface GoogleGeocodingAPIResponse {
-  results: GoogleGeocodingResult[];
-  status: 'OK' | 'ZERO_RESULTS' | 'OVER_QUERY_LIMIT' | 'REQUEST_DENIED' | 'INVALID_REQUEST' | 'UNKNOWN_ERROR';
-  error_message?: string;
-}
-
-
 // --- Helper Functions ---
 
 const mapOwmIconToAppIcon = (owmIcon: string): string => {
@@ -164,39 +141,39 @@ const mapOwmIconToAppIcon = (owmIcon: string): string => {
     '02n': 'CloudMoon',
     '03d': 'Cloud',
     '03n': 'Cloud',
-    '04d': 'Cloud', 
-    '04n': 'Cloud', 
-    '09d': 'CloudRain', 
-    '09n': 'CloudRain', 
-    '10d': 'CloudDrizzle', 
-    '10n': 'CloudDrizzle', 
-    '11d': 'CloudLightning', 
-    '11n': 'CloudLightning', 
-    '13d': 'CloudSnow', 
-    '13n': 'CloudSnow', 
-    '50d': 'CloudFog', 
-    '50n': 'CloudFog', 
+    '04d': 'Cloud',
+    '04n': 'Cloud',
+    '09d': 'CloudRain',
+    '09n': 'CloudRain',
+    '10d': 'CloudDrizzle',
+    '10n': 'CloudDrizzle',
+    '11d': 'CloudLightning',
+    '11n': 'CloudLightning',
+    '13d': 'CloudSnow',
+    '13n': 'CloudSnow',
+    '50d': 'CloudFog',
+    '50n': 'CloudFog',
   };
-  return mapping[owmIcon] || 'Sun'; 
+  return mapping[owmIcon] || 'Sun';
 };
 
 const getAQICategoryFromOWM = (aqiValue: number): string => {
   if (aqiValue === 1) return "Good";
   if (aqiValue === 2) return "Fair";
   if (aqiValue === 3) return "Moderate";
-  if (aqiValue === 4) return "Unhealthy"; 
-  if (aqiValue === 5) return "Very Unhealthy"; 
+  if (aqiValue === 4) return "Unhealthy";
+  if (aqiValue === 5) return "Very Unhealthy";
   return "Unknown";
 };
 
 const getDeterministicAQIScaledValue = (owmAqi: number): number => {
     switch (owmAqi) {
-        case 1: return 25;  
-        case 2: return 75;  
-        case 3: return 125; 
-        case 4: return 175; 
-        case 5: return 250; 
-        default: return 0;  
+        case 1: return 25;
+        case 2: return 75;
+        case 3: return 125;
+        case 4: return 175;
+        case 5: return 250;
+        default: return 0;
     }
 };
 
@@ -214,7 +191,7 @@ async function safeFetch(url: string, resourceName: string, apiKeyHeader?: { nam
   }
 
   const response = await fetch(url, { headers });
-  const responseText = await response.text(); 
+  const responseText = await response.text();
   if (!response.ok) {
     let errorDetails = `Failed to fetch ${resourceName}: ${response.status} ${response.statusText}`;
     try {
@@ -227,7 +204,7 @@ async function safeFetch(url: string, resourceName: string, apiKeyHeader?: { nam
     throw new Error(`Failed to fetch ${resourceName}: ${errorDetails}`);
   }
   try {
-    return JSON.parse(responseText); 
+    return JSON.parse(responseText);
   } catch (e) {
     console.error(`Failed to parse JSON from ${resourceName}:`, responseText);
     throw new Error(`Failed to parse JSON response from ${resourceName}.`);
@@ -237,7 +214,6 @@ async function safeFetch(url: string, resourceName: string, apiKeyHeader?: { nam
 
 export async function getRealtimeWeatherData(location: string): Promise<WeatherData> {
   const owmApiKey = process.env.WEATHER_API_KEY;
-  const googleApiKey = process.env.GOOGLE_GEOCODING_API_KEY;
 
   if (!owmApiKey) {
     console.error("OpenWeatherMap API key is missing (WEATHER_API_KEY not found).");
@@ -248,7 +224,7 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
     let lat: number;
     let lon: number;
     let displayLocationName: string;
-    let cityTimezoneOffsetSeconds: number; 
+    let cityTimezoneOffsetSeconds: number;
 
     // Check if location is coordinates
     if (location.startsWith('coords:')) {
@@ -259,72 +235,29 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
       lat = parseFloat(parts[0]);
       lon = parseFloat(parts[1]);
 
-      // Reverse geocode with OpenWeatherMap to get location name (Google could also be used here if preferred)
+      // Reverse geocode with OpenWeatherMap to get location name
       const reverseGeoDataArr = await safeFetch(`https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${owmApiKey}`, 'OpenWeatherMap reverse geocoding') as OWMGeocodingResponse[];
       if (reverseGeoDataArr && reverseGeoDataArr.length > 0) {
         const { name: rgName, country: rgCountry, state: rgState } = reverseGeoDataArr[0];
         displayLocationName = rgState ? `${rgName}, ${rgState}, ${rgCountry}` : `${rgName}, ${rgCountry}`;
       } else {
-        displayLocationName = `Lat: ${lat.toFixed(2)}, Lon: ${lon.toFixed(2)}`; 
+        displayLocationName = `Lat: ${lat.toFixed(2)}, Lon: ${lon.toFixed(2)}`;
       }
     } else {
-      // Try Google Geocoding API first
-      let googleGeocoded = false;
-      if (googleApiKey) {
-        try {
-          const googleGeoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${googleApiKey}`;
-          const googleGeoData = await safeFetch(googleGeoUrl, 'Google geocoding') as GoogleGeocodingAPIResponse;
-          
-          if (googleGeoData.status === 'OK' && googleGeoData.results.length > 0) {
-            const firstResult = googleGeoData.results[0];
-            lat = firstResult.geometry.location.lat;
-            lon = firstResult.geometry.location.lng;
-            displayLocationName = firstResult.formatted_address;
-            googleGeocoded = true;
-          } else if (googleGeoData.status === 'ZERO_RESULTS') {
-             console.warn(`Google Geocoding API returned status ZERO_RESULTS for location: "${location}". Falling back to OpenWeatherMap geocoding.`);
-          } else {
-            // For other non-OK statuses from Google (REQUEST_DENIED, OVER_QUERY_LIMIT, INVALID_REQUEST, UNKNOWN_ERROR)
-            const googleApiErrorMsg = `Google Geocoding API Error: ${googleGeoData.status} - ${googleGeoData.error_message || 'Failed to geocode with Google due to API error.'}`;
-            console.error(googleApiErrorMsg);
-            throw new Error(googleApiErrorMsg); // Throw, do not proceed to OWM fallback for these specific Google errors
-          }
-        } catch (googleError) {
-          // This catch block handles errors from safeFetch itself (e.g., network error, failed to parse Google's response)
-          // or the error explicitly thrown above for specific Google API statuses.
-          let detailedGoogleError = "Google Geocoding API call failed";
-          if (googleError instanceof Error) {
-            detailedGoogleError = googleError.message; 
-          }
-          console.warn("Google Geocoding API processing failed:", detailedGoogleError);
-          // If the error message indicates a critical Google API issue (like the one we throw above),
-          // we should re-throw it to prevent OWM fallback.
-          if (detailedGoogleError.startsWith("Google Geocoding API Error:")) {
-            throw new Error(detailedGoogleError);
-          }
-          // For other errors (e.g. network, parse error from safeFetch for Google), we can still attempt OWM fallback.
-          // googleGeocoded remains false, and the console.warn above alerts the dev.
-        }
-      } else {
-        console.log("Google Geocoding API key not found. Using OpenWeatherMap geocoding.");
+      // Geocode using OpenWeatherMap
+      const owmGeoDataArr = await safeFetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(location)}&limit=1&appid=${owmApiKey}`, 'OpenWeatherMap direct geocoding') as OWMGeocodingResponse[];
+      if (!owmGeoDataArr || owmGeoDataArr.length === 0) {
+        throw new Error('Location not found. Please try a different search term.');
       }
+      const { lat: geoLat, lon: geoLon, name: bestMatchLocationName, country, state } = owmGeoDataArr[0];
+      lat = geoLat;
+      lon = geoLon;
+      displayLocationName = state ? `${bestMatchLocationName}, ${state}, ${country}` : `${bestMatchLocationName}, ${country}`;
+    }
 
-      if (!googleGeocoded) {
-        // Fallback to OpenWeatherMap geocoding if Google failed (not due to critical API error) or no key
-        const owmGeoDataArr = await safeFetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(location)}&limit=1&appid=${owmApiKey}`, 'OpenWeatherMap direct geocoding') as OWMGeocodingResponse[];
-        if (!owmGeoDataArr || owmGeoDataArr.length === 0) {
-          throw new Error('Location not found. Please try a different search term.');
-        }
-        const { lat: geoLat, lon: geoLon, name: bestMatchLocationName, country, state } = owmGeoDataArr[0];
-        lat = geoLat;
-        lon = geoLon;
-        displayLocationName = state ? `${bestMatchLocationName}, ${state}, ${country}` : `${bestMatchLocationName}, ${country}`;
-      }
-      // Ensure lat, lon, and displayLocationName are set
-      if (lat === undefined || lon === undefined || !displayLocationName) {
-         // This state should ideally not be reached if the above logic is correct
-         throw new Error('Failed to geocode location using available services.');
-      }
+    // Ensure lat, lon, and displayLocationName are set
+    if (lat === undefined || lon === undefined || !displayLocationName) {
+        throw new Error('Failed to geocode location using OpenWeatherMap.');
     }
 
     // Fetch current weather using /data/2.5/weather
@@ -345,8 +278,8 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
     } catch (aqiError) {
         console.warn("Could not fetch AQI data, proceeding without it:", (aqiError as Error).message);
     }
-    
-    const ianaTimezone = getIANATimezoneFromOffset(cityTimezoneOffsetSeconds); 
+
+    const ianaTimezone = getIANATimezoneFromOffset(cityTimezoneOffsetSeconds);
 
     const current: CurrentWeatherData = {
       locationName: displayLocationName,
@@ -361,9 +294,9 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
 
     const dailyForecasts: { [dateStr: string]: OWMForecastListItem[] } = {};
     owmForecastData.list.forEach(item => {
-      const itemDate = new Date(item.dt * 1000); 
-      const localItemDate = new Date(itemDate.getTime() + cityTimezoneOffsetSeconds * 1000); 
-      const dateStr = localItemDate.toISOString().split('T')[0]; 
+      const itemDate = new Date(item.dt * 1000);
+      const localItemDate = new Date(itemDate.getTime() + cityTimezoneOffsetSeconds * 1000);
+      const dateStr = localItemDate.toISOString().split('T')[0];
 
       if (!dailyForecasts[dateStr]) {
         dailyForecasts[dateStr] = [];
@@ -381,8 +314,8 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
       });
 
       const representativeItem = dayItems.find(item => {
-        const hour = new Date(item.dt * 1000 + cityTimezoneOffsetSeconds * 1000).getUTCHours(); 
-        return hour >= 12 && hour < 18; 
+        const hour = new Date(item.dt * 1000 + cityTimezoneOffsetSeconds * 1000).getUTCHours();
+        return hour >= 12 && hour < 18;
       }) || dayItems[Math.floor(dayItems.length / 2)] || dayItems[0];
 
       const dailyHourlyForecast: HourlyForecastData[] = dayItems.map(item => ({
@@ -401,7 +334,7 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
         temp_low: Math.round(temp_min),
         description: representativeItem.weather[0]?.description || 'N/A',
         icon: mapOwmIconToAppIcon(representativeItem.weather[0]?.icon),
-        aqi: dayAqiData, 
+        aqi: dayAqiData,
         hourlyForecast: dailyHourlyForecast,
       };
     });
@@ -438,7 +371,7 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
       forecast,
       aqi: generalAqi,
       hourlyForecast: generalHourlyForecast,
-      timeZone: ianaTimezone, 
+      timeZone: ianaTimezone,
       resolvedLat: lat,
       resolvedLon: lon,
       aiScene: aiSceneData,
@@ -448,14 +381,13 @@ export async function getRealtimeWeatherData(location: string): Promise<WeatherD
     console.error("Error in getRealtimeWeatherData:", error);
     if (error instanceof Error) {
       // Check for specific operational errors to re-throw them as is
-      if (error.message.startsWith("Failed to geocode location:") || 
+      if (error.message.startsWith("Failed to geocode location:") ||
           error.message.startsWith("Location not found") ||
-          error.message.startsWith("Google Geocoding API Error:") || // Added this check
           error.message.startsWith("Failed to fetch current weather data:") ||
           error.message.startsWith("Failed to fetch forecast data:") ||
           error.message.startsWith("Failed to fetch AQI data:") ||
-          error.message.startsWith("Invalid API key") || // More specific API key issue
-          error.message.includes("requires a separate subscription") || // Subscription issue
+          error.message.startsWith("Invalid API key") ||
+          error.message.includes("requires a separate subscription") ||
           error.message.startsWith("Invalid coordinates format") ||
           error.message.startsWith("Failed to fetch")) { // Generic fetch failure from safeFetch
         throw new Error(error.message); // Re-throw specific operational errors
@@ -482,7 +414,7 @@ function transformOwAqiData(owmAqiData: OWMAirPollutionData, dt: number, timezon
             { name: "SO2", value: components.so2, threshold: 75 },   // Example for SO2
             { name: "CO", value: components.co / 1000, threshold: 9 } // Convert CO from µg/m³ to mg/m³ if OWM provides in µg/m³ and threshold is in mg/m³
         ];
-        
+
         // Determine dominant pollutant by checking which one most significantly exceeds its indicative threshold
         // This is a simplified approach. Real AQI dominant pollutant calculation can be more complex.
         let maxPollutantRatio = 0;
@@ -512,7 +444,7 @@ function transformOwAqiData(owmAqiData: OWMAirPollutionData, dt: number, timezon
           { name: "NO2", value: parseFloat(owmAqiData.components.no2.toFixed(1)), unit: "µg/m³" },
           { name: "SO2", value: parseFloat(owmAqiData.components.so2.toFixed(1)), unit: "µg/m³" },
           // Assuming OWM CO is in µg/m³, converting to mg/m³ by dividing by 1000 for common reporting units
-          { name: "CO", value: parseFloat((owmAqiData.components.co / 1000).toFixed(1)), unit: "mg/m³" }, 
+          { name: "CO", value: parseFloat((owmAqiData.components.co / 1000).toFixed(1)), unit: "mg/m³" },
         ].filter(p => p.value > 0 || p.value === 0), // Keep pollutants with 0 value if they are reported by API
       };
 }
