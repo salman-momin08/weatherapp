@@ -40,18 +40,19 @@ export interface ForecastDayData {
   hourlyForecast?: HourlyForecastData[]; // Hourly forecast specific to this day
 }
 
+// Added AIWeatherScene type
+export interface AIWeatherScene {
+  imageUri: string | null;
+  reliability: string | null;
+}
+
 export interface WeatherData {
   current: CurrentWeatherData;
   forecast: ForecastDayData[];
   aqi?: AQIData;
   hourlyForecast?: HourlyForecastData[];
   timeZone?: string;
-  resolvedLat?: number; // Added for reliably saving coordinates
-  resolvedLon?: number; // Added for reliably saving coordinates
+  resolvedLat?: number; 
+  resolvedLon?: number;
+  aiScene?: AIWeatherScene; // Added aiScene property
 }
-
-// AIWeatherScene type removed
-// export interface AIWeatherScene {
-//   imageUri: string | null;
-//   reliability: string | null;
-// }

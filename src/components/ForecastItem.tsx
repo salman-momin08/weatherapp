@@ -1,3 +1,4 @@
+
 // src/components/ForecastItem.tsx
 "use client";
 
@@ -17,9 +18,10 @@ export function ForecastItem({ data, onClick, isSelected }: ForecastItemProps) {
     <Card 
       onClick={onClick}
       className={cn(
-        "flex-shrink-0 w-36 text-center shadow-md bg-card/70 backdrop-blur-sm hover:shadow-lg transition-all duration-300 cursor-pointer",
+        "flex-shrink-0 w-36 text-center shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer",
         "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-        isSelected && "ring-2 ring-primary border-primary"
+        "bg-gradient-to-br from-primary/70 to-accent/70 backdrop-blur-sm text-primary-foreground", // Gradient background, adjusted text
+        isSelected && "ring-2 ring-primary-foreground border-primary-foreground" // Adjusted selection ring for contrast
       )}
       role="button"
       tabIndex={0}
@@ -29,14 +31,14 @@ export function ForecastItem({ data, onClick, isSelected }: ForecastItemProps) {
     >
       <CardHeader className="p-3 pb-1">
         <CardTitle className="text-sm font-medium">{data.date.split(',')[0]}</CardTitle>
-        <CardDescription className="text-xs">{data.date.substring(data.date.indexOf(',') + 2)}</CardDescription>
+        <CardDescription className="text-xs text-primary-foreground/80">{data.date.substring(data.date.indexOf(',') + 2)}</CardDescription>
       </CardHeader>
       <CardContent className="p-3 pt-1 flex flex-col items-center">
         <div className="my-2">
-          {getWeatherIcon(data.icon, { size: 36, className: "text-accent" })}
+          {getWeatherIcon(data.icon, { size: 36, className: "text-white" })} {/* Icon color for visibility */}
         </div>
         <p className="text-lg font-semibold">{Math.round(data.temp_high)}° / {Math.round(data.temp_low)}°</p>
-        <p className="text-xs capitalize text-muted-foreground mt-1 h-8 overflow-hidden text-ellipsis">{data.description}</p>
+        <p className="text-xs capitalize text-primary-foreground/80 mt-1 h-8 overflow-hidden text-ellipsis">{data.description}</p>
       </CardContent>
     </Card>
   );

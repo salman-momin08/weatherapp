@@ -1,3 +1,4 @@
+
 // src/components/HourlyForecast.tsx
 "use client";
 
@@ -9,7 +10,7 @@ import { Clock } from 'lucide-react';
 
 interface HourlyForecastProps {
   data: HourlyForecastData[];
-  displayForDate?: string; // e.g., "Today", "Tomorrow", "Mon, Jul 22"
+  displayForDate?: string; 
 }
 
 export function HourlyForecast({ data, displayForDate }: HourlyForecastProps) {
@@ -20,10 +21,10 @@ export function HourlyForecast({ data, displayForDate }: HourlyForecastProps) {
   const title = `Hourly Forecast ${displayForDate ? `for ${displayForDate}` : ''}`;
 
   return (
-    <Card className="w-full max-w-3xl mx-auto shadow-xl bg-card/80 backdrop-blur-sm">
+    <Card className="w-full max-w-3xl mx-auto shadow-xl bg-gradient-to-br from-primary/80 to-accent/80 backdrop-blur-sm text-card-foreground">
       <CardHeader>
         <CardTitle className="text-2xl flex items-center justify-center">
-          <Clock className="mr-2 text-primary" /> {title}
+          <Clock className="mr-2 text-primary-foreground" /> {title} {/* Adjusted icon color */}
         </CardTitle>
       </CardHeader>
       <CardContent>

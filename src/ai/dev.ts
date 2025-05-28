@@ -1,5 +1,8 @@
 import { config } from 'dotenv';
 config();
 
-// Removed import for '@/ai/flows/generate-weather-scene.ts';
-// If no other flows are added, this file might become redundant.
+// Re-import the generate-weather-scene flow
+import './flows/generate-weather-scene'; 
+
+// If you have other flows, import them here as well.
+// Example: import './flows/another-flow';

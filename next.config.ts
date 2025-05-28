@@ -16,7 +16,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      // Removed pattern for lh3.googleusercontent.com (AI generated images)
+      { // Re-added for AI generated images from Google
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
 };
