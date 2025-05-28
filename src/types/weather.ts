@@ -42,12 +42,14 @@ export interface ForecastDayData {
 
 export interface WeatherData {
   current: CurrentWeatherData;
-  forecast: ForecastDayData[];
+  forecast: ForecastDayData[]; // Will now typically be 5 days
   aqi?: AQIData; // Current day's AQI
   hourlyForecast?: HourlyForecastData[]; // Current day's hourly forecast
+  timeZone?: string; // IANA timezone string, if available from API/geocoding
 }
 
 export interface AIWeatherScene {
   imageUri: string | null;
   reliability: string | null;
 }
+

@@ -17,44 +17,40 @@ interface WeatherDisplayProps {
   aiScene: AIWeatherScene | null;
   selectedForecastDay: ForecastDayData | null;
   onForecastDaySelect: (day: ForecastDayData | null) => void;
-  timeZone?: string; // For passing to CurrentWeather for accurate time formatting
+  // timeZone prop removed, as WeatherData now includes it
 }
 
-export function WeatherDisplay({ weatherData, aiScene, selectedForecastDay, onForecastDaySelect, timeZone }: WeatherDisplayProps) {
+export function WeatherDisplay({ weatherData, aiScene, selectedForecastDay, onForecastDaySelect }: WeatherDisplayProps) {
   
   const aqiDataToDisplay = selectedForecastDay?.aqi ?? weatherData.aqi;
   const hourlyDataToDisplay = selectedForecastDay?.hourlyForecast ?? weatherData.hourlyForecast;
   
   let displayDateLabel = "Today"; 
   if (selectedForecastDay) {
-    // For simplicity, using the date string from forecast data for the label
-    // This assumes the forecastData.date is already in a user-friendly short format like "Mon" or "Mon, Jul 22"
-    // If it's just "Mon", that's fine. If it's "Mon, Jul 22", we can split it.
     const dateParts = selectedForecastDay.date.split(',');
-    displayDateLabel = dateParts[0]; // e.g., "Mon" from "Mon, Jul 22"
+    displayDateLabel = dateParts[0]; 
 
-    // A more robust way to check for "Today" or "Tomorrow" if API timezone is available
-    // This requires timezone to be passed down or handled globally
-    if (timeZone) {
-        const today = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone });
-        const tomorrowDate = new Date();
-        tomorrowDate.setDate(new Date().getDate() + 1);
-        const tomorrow = tomorrowDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone });
+    // Check if selected day is "Today" or "Tomorrow" based on its date string for more user-friendly labels
+    // This simplified check assumes the date string format from weatherActions
+    // A more robust solution would involve proper date object comparisons with timezones.
+    const today = new Date();
+    const todayDateString = today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: weatherData.timeZone || 'UTC' });
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const tomorrowDateString = tomorrow.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: weatherData.timeZone || 'UTC' });
 
-        if (selectedForecastDay.date === today) {
-            displayDateLabel = "Today";
-        } else if (selectedForecastDay.date === tomorrow) {
-            displayDateLabel = "Tomorrow";
-        }
+    if (selectedForecastDay.date === todayDateString) {
+        displayDateLabel = "Today";
+    } else if (selectedForecastDay.date === tomorrowDateString) {
+        displayDateLabel = "Tomorrow";
     }
-
-
   }
 
 
   return (
     <div className="space-y-8 w-full">
-      <CurrentWeather data={weatherData.current} aiReliability={aiScene?.reliability} timeZone={timeZone} />
+      <CurrentWeather data={weatherData.current} aiReliability={aiScene?.reliability} timeZone={weatherData.timeZone} />
       
       {aqiDataToDisplay && (
         <AQIDisplay data={aqiDataToDisplay} displayForDate={displayDateLabel} />
@@ -67,7 +63,7 @@ export function WeatherDisplay({ weatherData, aiScene, selectedForecastDay, onFo
       <Card className="w-full max-w-3xl mx-auto shadow-xl bg-card/80 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-2xl flex items-center justify-center">
-            <CalendarDays className="mr-2 text-primary" /> 7-Day Forecast
+            <CalendarDays className="mr-2 text-primary" /> 5-Day Forecast {/* Changed from 7-Day */}
           </CardTitle>
           <CardContent className="text-xs text-muted-foreground text-center p-0 pt-1">
             Click on a day to see its detailed AQI and hourly forecast.
@@ -102,6 +98,4 @@ export function WeatherDisplay({ weatherData, aiScene, selectedForecastDay, onFo
     </div>
   );
 }
-
-
     
