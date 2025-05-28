@@ -1,22 +1,18 @@
-import type {Metadata} from 'next';
-import { Inter } from 'next/font/google'; // Changed from GeistSans to Inter
+// src/app/layout.tsx
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from '@/context/AuthContext'; // Import AuthProvider
 
-const inter = Inter({ // Changed from GeistSans to Inter and updated const name
-  variable: '--font-sans', // Using a generic variable name --font-sans
+const inter = Inter({
+  variable: '--font-sans',
   subsets: ['latin'],
 });
 
-// Geist Mono can be kept if specific mono font sections are needed, otherwise remove if not used.
-// const geistMono = GeistMono({
-//   variable: '--font-geist-mono',
-//   subsets: ['latin'],
-// });
-
 export const metadata: Metadata = {
-  title: 'WeatherEyes', // Updated App Name
-  description: 'Real-time weather forecasts and AI-generated weather scenes.', // Updated Description
+  title: 'WeatherEyes',
+  description: 'Real-time weather forecasts, AI scenes, and saved searches.', // Updated Description
 };
 
 export default function RootLayout({
@@ -26,9 +22,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased`}> {/* Use the new inter.variable and kept font-sans for Tailwind compatibility */}
-        {children}
-        <Toaster />
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <AuthProvider> {/* Wrap children with AuthProvider */}
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
