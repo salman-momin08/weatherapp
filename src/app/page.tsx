@@ -13,8 +13,8 @@ import type { SavedSearch } from '@/types/savedSearch';
 import { getRealtimeWeatherData } from '@/app/actions/weatherActions';
 import { generateWeatherScene, type GenerateWeatherSceneInput } from '@/ai/flows/generate-weather-scene';
 import { SavedSearchItem } from '@/components/SavedSearchItem';
-import { AuthDisplay } from '@/components/AuthDisplay'; // For header
-import { useAuth } from '@/hooks/useAuth'; // For user state
+import { AuthDisplay } from '@/components/AuthDisplay'; 
+import { useAuth } from '@/hooks/useAuth'; 
 import { Github, Linkedin, Loader2, ShieldAlert, Save, ListChecks } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -22,19 +22,20 @@ const DEFAULT_LOCATION = "Paris";
 
 export default function WeatherPage() {
   const { toast } = useToast();
-  const { user, token, isLoading: authIsLoading } = useAuth(); // Get user and token
+  const { user, token, isLoading: authIsLoading } = useAuth(); 
 
   const [location, setLocation] = useState<string>(DEFAULT_LOCATION);
   const [currentCoords, setCurrentCoords] = useState<{lat: number; lon: number} | null>(null);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [aiScene, setAiScene] = useState<AIWeatherScene | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // For weather data fetching
+  const [isLoading, setIsLoading] = useState<boolean>(true); 
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedForecastDay, setSelectedForecastDay] = useState<ForecastDayData | null>(null);
 
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [isLoadingSaved, setIsLoadingSaved] = useState<boolean>(false);
+  const [isDeletingSearch, setIsDeletingSearch] = useState<string | null>(null); // To track which search is being deleted
   const [showSavedSearches, setShowSavedSearches] = useState<boolean>(false);
 
   const fetchWeatherAndScene = useCallback(async (loc: string, coords?: {lat: number, lon: number}) => {
@@ -81,34 +82,30 @@ export default function WeatherPage() {
   }, [toast]);
 
   const fetchSavedSearches = useCallback(async () => {
-    if (!token || !user) { // Only fetch if user is logged in and token is available
-      setSavedSearches([]); // Clear searches if not logged in
+    if (!token || !user) { 
+      setSavedSearches([]); 
       return;
     }
     setIsLoadingSaved(true);
     try {
       const response = await fetch('/api/saved-searches', {
         headers: {
-          'Authorization': `Bearer ${token}`, // Send JWT
+          'Authorization': `Bearer ${token}`, 
         },
       });
       const responseText = await response.text();
 
       if (!response.ok) {
         let descriptiveError = `Failed to fetch saved searches. Status: ${response.status}.`;
-        if (response.status === 401) {
-            descriptiveError = "Unauthorized. Please log in again."
-        } else {
-            try {
-                const errorData = JSON.parse(responseText);
-                descriptiveError += ` Server message: ${errorData.error || errorData.message || 'Unknown API error'}`;
-                if (errorData.details) {
-                    console.error("Detailed server error for saved searches:", errorData.details);
-                }
-            } catch (jsonParseError) {
-                descriptiveError += " The server returned an unexpected (non-JSON) response. This might indicate a server-side issue or misconfiguration. Check server logs.";
-                console.error("Received HTML or non-JSON error from /api/saved-searches GET:", responseText.substring(0, 500) + (responseText.length > 500 ? "..." : ""));
+        try {
+            const errorData = JSON.parse(responseText);
+            descriptiveError += ` Server message: ${errorData.error || errorData.message || 'Unknown API error'}`;
+            if (errorData.details) {
+                console.error("Detailed server error for saved searches:", errorData.details);
             }
+        } catch (jsonParseError) {
+            descriptiveError += " The server returned an unexpected (non-JSON) response. This might indicate a server-side issue or misconfiguration. Check server logs.";
+            console.error("Received HTML or non-JSON error from /api/saved-searches GET:", responseText.substring(0, 500) + (responseText.length > 500 ? "..." : ""));
         }
         throw new Error(descriptiveError);
       }
@@ -128,10 +125,10 @@ export default function WeatherPage() {
   }, [fetchWeatherAndScene]);
 
   useEffect(() => {
-    if (user && token) { // Fetch saved searches when user logs in or token changes
+    if (user && token) { 
       fetchSavedSearches();
     } else {
-      setSavedSearches([]); // Clear if user logs out
+      setSavedSearches([]); 
     }
   }, [user, token, fetchSavedSearches]);
 
@@ -176,14 +173,12 @@ export default function WeatherPage() {
     try {
       let latToSave: number | undefined = weatherData.resolvedLat;
       let lonToSave: number | undefined = weatherData.resolvedLon;
-
+      
       if (latToSave === undefined || lonToSave === undefined) {
-        // Fallback if resolvedLat/Lon aren't in weatherData for some reason
         if (currentCoords) {
           latToSave = currentCoords.lat;
           lonToSave = currentCoords.lon;
         } else {
-            // As a last resort, try to parse from location if it's coords string
             if (location.startsWith('coords:')) {
                 const parts = location.substring(7).split(',');
                 if (parts.length === 2 && !isNaN(parseFloat(parts[0])) && !isNaN(parseFloat(parts[1]))) {
@@ -204,7 +199,7 @@ export default function WeatherPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`, // Send JWT
+          'Authorization': `Bearer ${token}`, 
         },
         body: JSON.stringify({
             weatherData,
@@ -217,25 +212,21 @@ export default function WeatherPage() {
       const responseText = await response.text();
       if (!response.ok) {
         let descriptiveError = `Failed to save search. Status: ${response.status}.`;
-        if (response.status === 401) {
-            descriptiveError = "Unauthorized. Please log in again."
-        } else {
-            try {
-                const errorData = JSON.parse(responseText);
-                descriptiveError += ` Server message: ${errorData.error || errorData.details || errorData.message || 'Unknown API error'}`;
-                if (errorData.details) {
-                    console.error("Detailed server error on save:", errorData.details);
-                }
-            } catch (jsonError) {
-                descriptiveError += " The server returned an unexpected (non-JSON) response. This might indicate a server-side issue or misconfiguration. Check server logs.";
-                console.error("Received HTML or non-JSON error from /api/saved-searches POST:", responseText.substring(0, 500) + (responseText.length > 500 ? "..." : ""));
+        try {
+            const errorData = JSON.parse(responseText);
+            descriptiveError += ` Server message: ${errorData.error || errorData.details || errorData.message || 'Unknown API error'}`;
+            if (errorData.details) {
+                console.error("Detailed server error on save:", errorData.details);
             }
+        } catch (jsonError) {
+            descriptiveError += " The server returned an unexpected (non-JSON) response. This might indicate a server-side issue or misconfiguration. Check server logs.";
+            console.error("Received HTML or non-JSON error from /api/saved-searches POST:", responseText.substring(0, 500) + (responseText.length > 500 ? "..." : ""));
         }
         throw new Error(descriptiveError);
       }
       const newSavedSearch: SavedSearch = JSON.parse(responseText);
       toast({ title: "Search Saved!", description: `${newSavedSearch.locationName} has been saved.` });
-      fetchSavedSearches(); // Refresh saved searches list
+      fetchSavedSearches(); 
     } catch (err) {
       console.error("Failed to save search:", err);
       toast({ title: "Error Saving", description: (err as Error).message || "Could not save the search.", variant: "destructive" });
@@ -273,6 +264,42 @@ export default function WeatherPage() {
     toast({ title: "Loaded Saved Search", description: `Displaying weather for ${savedSearch.locationName}.`});
   };
 
+  const handleDeleteSearch = async (searchId: string) => {
+    if (!token || !user) {
+      toast({ title: "Login Required", description: "Please log in to delete searches.", variant: "destructive" });
+      return;
+    }
+    setIsDeletingSearch(searchId);
+    try {
+      const response = await fetch(`/api/saved-searches/${searchId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const responseText = await response.text();
+      if (!response.ok) {
+        let descriptiveError = `Failed to delete search. Status: ${response.status}.`;
+         try {
+            const errorData = JSON.parse(responseText);
+            descriptiveError += ` Server message: ${errorData.error || errorData.message || 'Unknown API error'}`;
+        } catch (jsonError) {
+            descriptiveError += " The server returned an unexpected (non-JSON) response.";
+            console.error("Received HTML or non-JSON error from /api/saved-searches DELETE:", responseText.substring(0, 500) + (responseText.length > 500 ? "..." : ""));
+        }
+        throw new Error(descriptiveError);
+      }
+      toast({ title: "Search Deleted", description: "The saved search has been removed." });
+      setSavedSearches(prevSearches => prevSearches.filter(s => s._id?.toString() !== searchId));
+    } catch (err) {
+      console.error("Failed to delete search:", err);
+      toast({ title: "Error Deleting", description: (err as Error).message || "Could not delete the search.", variant: "destructive" });
+    } finally {
+      setIsDeletingSearch(null);
+    }
+  };
+
+
   const handleForecastDaySelect = (day: ForecastDayData | null) => {
     setSelectedForecastDay(day === selectedForecastDay ? null : day);
   };
@@ -289,19 +316,19 @@ export default function WeatherPage() {
       <header className="p-4 bg-background/70 backdrop-blur-md shadow-md sticky top-0 z-50">
         <div className="container mx-auto flex justify-between items-center">
           <Link href="/" className="text-3xl font-bold text-primary">WeatherEyes</Link>
-          <AuthDisplay /> {/* Use AuthDisplay for login/user status */}
+          <AuthDisplay /> 
         </div>
       </header>
 
       <main className="flex-grow container mx-auto p-4 md:p-8 flex flex-col items-center">
-        <LocationInput onSearch={handleSearch} onGeolocate={handleGeolocate} isLoading={isLoading || isSaving || authIsLoading} />
+        <LocationInput onSearch={handleSearch} onGeolocate={handleGeolocate} isLoading={isLoading || isSaving || authIsLoading || !!isDeletingSearch} />
 
-        {user && !authIsLoading && ( // Only show save/view buttons if user is logged in
+        {user && !authIsLoading && ( 
           <div className="flex gap-2 mb-6">
-              <Button onClick={handleSaveSearch} disabled={isSaving || isLoading || !weatherData} className="min-w-[150px]">
+              <Button onClick={handleSaveSearch} disabled={isSaving || isLoading || !weatherData || !!isDeletingSearch} className="min-w-[150px]">
                   {isSaving ? <Loader2 className="animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save Search</>}
               </Button>
-              <Button variant="outline" onClick={() => setShowSavedSearches(prev => !prev)} disabled={isLoadingSaved} className="min-w-[180px]">
+              <Button variant="outline" onClick={() => setShowSavedSearches(prev => !prev)} disabled={isLoadingSaved || !!isDeletingSearch} className="min-w-[180px]">
                   {isLoadingSaved ? <Loader2 className="animate-spin" /> : <><ListChecks className="mr-2 h-4 w-4" /> {showSavedSearches ? "Hide" : "My Saved Searches"}</>}
               </Button>
           </div>
@@ -318,7 +345,12 @@ export default function WeatherPage() {
               {!isLoadingSaved && savedSearches.length > 0 && (
                 <div className="space-y-4 max-h-96 overflow-y-auto p-1">
                   {savedSearches.map(s => (
-                    <SavedSearchItem key={s._id?.toString()} search={s} onView={handleViewSavedSearch} />
+                    <SavedSearchItem 
+                        key={s._id?.toString()} 
+                        search={s} 
+                        onView={handleViewSavedSearch}
+                        onDelete={handleDeleteSearch} 
+                    />
                   ))}
                 </div>
               )}

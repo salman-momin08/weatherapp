@@ -4,19 +4,26 @@
 import type { SavedSearch } from '@/types/savedSearch';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Thermometer, CalendarDays, Trash2, Edit3, Eye } from 'lucide-react'; // Added Eye for View
+import { MapPin, Thermometer, CalendarDays, Trash2, Eye } from 'lucide-react'; 
 import { getWeatherIcon } from '@/lib/weather-utils';
 
 interface SavedSearchItemProps {
   search: SavedSearch;
-  onView: (search: SavedSearch) => void; // To load this search's data into the main display
-  onDelete?: (searchId: string) => void; // Optional for now
-  onEdit?: (search: SavedSearch) => void;   // Optional for now
+  onView: (search: SavedSearch) => void; 
+  onDelete: (searchId: string) => void; 
 }
 
-export function SavedSearchItem({ search, onView, onDelete, onEdit }: SavedSearchItemProps) {
-  const { locationName, weatherSnapshot, createdAt } = search;
+export function SavedSearchItem({ search, onView, onDelete }: SavedSearchItemProps) {
+  const { locationName, weatherSnapshot, createdAt, _id } = search;
   const currentSnapshot = weatherSnapshot.current;
+
+  const handleDelete = () => {
+    if (_id) {
+      // Optional: Add a confirmation dialog here before calling onDelete
+      // For now, directly call onDelete
+      onDelete(_id.toString());
+    }
+  };
 
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow bg-card/90 backdrop-blur-sm">
@@ -44,7 +51,6 @@ export function SavedSearchItem({ search, onView, onDelete, onEdit }: SavedSearc
         <p className="text-sm text-muted-foreground capitalize">
           {currentSnapshot.description}
         </p>
-        {/* Add more quick info if desired, e.g., AQI */}
         {weatherSnapshot.aqi && (
           <p className="text-sm text-muted-foreground">
             AQI: {weatherSnapshot.aqi.value} ({weatherSnapshot.aqi.category})
@@ -52,16 +58,9 @@ export function SavedSearchItem({ search, onView, onDelete, onEdit }: SavedSearc
         )}
       </CardContent>
       <CardFooter className="flex justify-end gap-2">
-        {onDelete && (
-          <Button variant="outline" size="sm" onClick={() => onDelete(search._id!.toString())} aria-label="Delete search">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-        {onEdit && (
-           <Button variant="outline" size="sm" onClick={() => onEdit(search)} aria-label="Edit search">
-            <Edit3 className="h-4 w-4" />
-          </Button>
-        )}
+        <Button variant="outline" size="sm" onClick={handleDelete} aria-label="Delete search">
+          <Trash2 className="h-4 w-4" />
+        </Button>
         <Button size="sm" onClick={() => onView(search)} aria-label="View search details">
           <Eye className="mr-1.5 h-4 w-4" /> View / Load
         </Button>
