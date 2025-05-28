@@ -21,7 +21,7 @@ export function WeatherDisplay({ weatherData, aiScene }: WeatherDisplayProps) {
       <Card className="w-full max-w-3xl mx-auto shadow-xl bg-card/80 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-2xl flex items-center justify-center">
-            <CalendarDays className="mr-2 text-primary" /> 5-Day Forecast
+            <CalendarDays className="mr-2 text-primary" /> 7-Day Forecast
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -38,3 +38,4 @@ export function WeatherDisplay({ weatherData, aiScene }: WeatherDisplayProps) {
     </div>
   );
 }
+

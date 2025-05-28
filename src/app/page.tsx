@@ -173,7 +173,7 @@ export default function WeatherPage() {
 
       <footer className="p-4 bg-background/70 backdrop-blur-md shadow-inner text-center">
         <p className="text-sm text-muted-foreground">
-          Developed by Firebase Studio Team.
+          Developed by khwajamainuddin.
         </p>
         <div className="flex justify-center space-x-4 mt-2">
             <a href="https://github.com/FirebaseExtended/studio-examples" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">
@@ -187,3 +187,4 @@ export default function WeatherPage() {
     </div>
   );
 }
+

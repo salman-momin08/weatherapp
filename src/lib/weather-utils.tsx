@@ -31,7 +31,7 @@ export const getMockWeatherData = async (location: string): Promise<WeatherData>
 
   const forecast: ForecastDayData[] = [];
   const today = new Date();
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 7; i++) { // Changed loop from 5 to 7 for 7-day forecast
     const forecastDate = new Date(today);
     forecastDate.setDate(today.getDate() + i + 1);
     const dayRandomIndex = Math.floor(Math.random() * weatherConditions.length);
@@ -78,3 +78,4 @@ export const formatTimestamp = (timestamp: number): string => {
     minute: '2-digit',
   });
 };
+
