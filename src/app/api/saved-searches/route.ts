@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const collection = await getSavedSearchesCollection();
     // Filter searches by userId
-    const savedSearches = await collection.find({ userId }).sort({ createdAt: -1 }).toArray();
+    const savedSearches = await collection.find({ userId: new ObjectId(userId) }).sort({ createdAt: -1 }).toArray();
     return NextResponse.json(savedSearches, { status: 200 });
   } catch (error) {
     console.error('Failed to fetch saved searches:', error);
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const collection = await getSavedSearchesCollection();
     const now = new Date();
     const newSavedSearch: Omit<SavedSearch, '_id'> = {
-      userId, // Associate with the authenticated user
+      userId: new ObjectId(userId), // Convert string userId to ObjectId before storing
       locationName: locationName || weatherData.current.locationName,
       latitude,
       longitude,

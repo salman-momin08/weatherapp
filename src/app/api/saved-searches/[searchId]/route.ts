@@ -35,7 +35,7 @@ export async function DELETE(request: NextRequest, context: { params: Params }) 
     });
 
     if (result.deletedCount === 0) {
-      console.warn(`Delete operation: No document found for searchId ${searchId} and userId ${userId}.`);
+      console.warn(`Delete operation: No document found for searchId ${searchId} and userId ${userId}. Possible reason: userId in DB is string, or ID mismatch.`);
       return NextResponse.json({ error: 'Saved search not found or user not authorized to delete' }, { status: 404 });
     }
 
@@ -77,7 +77,7 @@ export async function PUT(request: NextRequest, context: { params: Params }) {
     });
 
     if (!existingSearch) {
-      console.warn(`Update operation: No document found for searchId ${searchId} and userId ${userId}.`);
+      console.warn(`Update operation: No document found for searchId ${searchId} and userId ${userId}. Possible reason: userId in DB is string, or ID mismatch.`);
       return NextResponse.json({ error: 'Saved search not found or user not authorized to update' }, { status: 404 });
     }
 
