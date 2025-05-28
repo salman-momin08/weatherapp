@@ -16,7 +16,7 @@ interface CurrentWeatherProps {
 
 export function CurrentWeather({ data, timeZone, aiScene }: CurrentWeatherProps) {
   return (
-    <Card className="w-full max-w-md mx-auto mb-8 shadow-xl bg-gradient-to-br from-primary/80 to-accent/80 backdrop-blur-sm text-card-foreground">
+    <Card className="w-full max-w-md mx-auto mb-8 shadow-xl bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm text-card-foreground">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-center text-center mb-1">
           <MapPin className="h-7 w-7 mr-2 text-primary-foreground" /> {/* Adjusted for contrast on gradient */}
@@ -57,3 +57,5 @@ export function CurrentWeather({ data, timeZone, aiScene }: CurrentWeatherProps)
     </Card>
   );
 }
+
+    

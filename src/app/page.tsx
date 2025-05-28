@@ -364,7 +364,7 @@ export default function WeatherPage() {
         )}
 
         {user && showSavedSearches && (
-          <Card className="w-full max-w-2xl mb-8 bg-gradient-to-br from-primary/80 to-accent/80 backdrop-blur-sm shadow-xl">
+          <Card className="w-full max-w-2xl mb-8 bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm shadow-xl">
             <CardHeader>
               <CardTitle className="text-2xl text-center text-card-foreground">My Saved Searches</CardTitle>
             </CardHeader>
@@ -391,7 +391,7 @@ export default function WeatherPage() {
         )}
 
         {(isLoading || authIsLoading) && !weatherData && (
-          <div className="flex flex-col items-center justify-center text-center p-10 rounded-lg bg-gradient-to-br from-primary/80 to-accent/80 backdrop-blur-sm shadow-xl text-card-foreground">
+          <div className="flex flex-col items-center justify-center text-center p-10 rounded-lg bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm shadow-xl text-card-foreground">
             <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
             <p className="text-xl font-semibold">{authIsLoading ? "Authenticating..." : "Fetching weather data..."}</p>
             <p className="text-muted-foreground">Please wait a moment.</p>
@@ -418,7 +418,7 @@ export default function WeatherPage() {
         )}
 
         {!isLoading && !authIsLoading && !weatherData && !error && (
-            <div className="text-center p-10 rounded-lg bg-gradient-to-br from-primary/80 to-accent/80 backdrop-blur-sm shadow-xl text-card-foreground">
+            <div className="text-center p-10 rounded-lg bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm shadow-xl text-card-foreground">
                 <p className="text-xl">Welcome to WeatherEyes!</p>
                 <p className="text-muted-foreground">Enter a location to get started or use your current location.</p>
                 {!user && <p className="text-muted-foreground mt-2">Consider <Link href="/login" className="underline text-primary hover:text-accent">logging in</Link> or <Link href="/signup" className="underline text-primary hover:text-accent">signing up</Link> to save your searches!</p>}
@@ -450,3 +450,5 @@ export default function WeatherPage() {
     </div>
   );
 }
+
+    

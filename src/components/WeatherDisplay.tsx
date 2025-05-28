@@ -57,7 +57,7 @@ export function WeatherDisplay({ weatherData, selectedForecastDay, onForecastDay
         <HourlyForecast data={hourlyDataToDisplay} displayForDate={displayDateLabel} />
       )}
 
-      <Card className="w-full max-w-3xl mx-auto shadow-xl bg-gradient-to-br from-primary/80 to-accent/80 backdrop-blur-sm text-card-foreground">
+      <Card className="w-full max-w-3xl mx-auto shadow-xl bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm text-card-foreground">
         <CardHeader>
           <CardTitle className="text-2xl flex items-center justify-center">
             <CalendarDays className="mr-2 text-primary-foreground" /> 5-Day Forecast {/* Adjusted icon color */}
@@ -95,3 +95,5 @@ export function WeatherDisplay({ weatherData, selectedForecastDay, onForecastDay
     </div>
   );
 }
+
+    

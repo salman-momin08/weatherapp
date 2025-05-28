@@ -20,7 +20,7 @@ export function ForecastItem({ data, onClick, isSelected }: ForecastItemProps) {
       className={cn(
         "flex-shrink-0 w-36 text-center shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer",
         "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-        "bg-gradient-to-br from-primary/70 to-accent/70 backdrop-blur-sm text-primary-foreground", // Gradient background, adjusted text
+        "bg-gradient-to-br from-primary/70 to-background/60 backdrop-blur-sm text-primary-foreground", // Gradient background, adjusted text
         isSelected && "ring-2 ring-primary-foreground border-primary-foreground" // Adjusted selection ring for contrast
       )}
       role="button"
@@ -43,3 +43,5 @@ export function ForecastItem({ data, onClick, isSelected }: ForecastItemProps) {
     </Card>
   );
 }
+
+    

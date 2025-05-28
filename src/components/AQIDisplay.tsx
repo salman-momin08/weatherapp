@@ -36,7 +36,7 @@ const getAQIColorClass = (category: string): string => {
 export function AQIDisplay({ data, displayForDate }: AQIDisplayProps) {
   const title = `Air Quality Index (AQI) ${displayForDate ? `for ${displayForDate}` : ''}`;
   return (
-    <Card className="w-full max-w-md mx-auto shadow-xl bg-gradient-to-br from-primary/80 to-accent/80 backdrop-blur-sm text-card-foreground">
+    <Card className="w-full max-w-md mx-auto shadow-xl bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm text-card-foreground">
       <CardHeader className="pb-2 text-center">
         <CardTitle className="text-2xl flex items-center justify-center">
           <Leaf className="mr-2 text-primary-foreground" /> {title} {/* Adjusted icon color */}
@@ -80,3 +80,5 @@ export function AQIDisplay({ data, displayForDate }: AQIDisplayProps) {
     </Card>
   );
 }
+
+    

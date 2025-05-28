@@ -12,7 +12,7 @@ interface HourlyForecastItemProps {
 
 export function HourlyForecastItem({ data }: HourlyForecastItemProps) {
   return (
-    <Card className="flex-shrink-0 w-28 text-center shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-primary/60 to-accent/60 backdrop-blur-sm text-primary-foreground">
+    <Card className="flex-shrink-0 w-28 text-center shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-primary/60 to-background/50 backdrop-blur-sm text-primary-foreground">
       <CardHeader className="p-2 pb-0">
         <CardTitle className="text-sm font-medium">{data.time}</CardTitle>
       </CardHeader>
@@ -28,3 +28,5 @@ export function HourlyForecastItem({ data }: HourlyForecastItemProps) {
     </Card>
   );
 }
+
+    

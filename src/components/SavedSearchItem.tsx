@@ -34,7 +34,7 @@ export function SavedSearchItem({ search, onView, onDelete, onEdit, isDeleting, 
   const anyOperationInProgress = isDeleting || isEditing;
 
   return (
-    <Card className="shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-primary/80 to-accent/80 backdrop-blur-sm text-card-foreground">
+    <Card className="shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-primary/80 to-background/70 backdrop-blur-sm text-card-foreground">
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
@@ -82,3 +82,5 @@ export function SavedSearchItem({ search, onView, onDelete, onEdit, isDeleting, 
     </Card>
   );
 }
+
+    
