@@ -8,7 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { LocationInput } from '@/components/LocationInput';
 import { WeatherDisplay } from '@/components/WeatherDisplay';
 import type { WeatherData, AIWeatherScene, ForecastDayData } from '@/types/weather';
-import { getMockWeatherData } from '@/lib/weather-utils';
+// import { getMockWeatherData } from '@/lib/weather-utils'; // Replaced with server action
+import { getRealtimeWeatherData } from '@/app/actions/weatherActions'; // Import server action
 import { generateWeatherScene, type GenerateWeatherSceneInput } from '@/ai/flows/generate-weather-scene';
 import { Info, Github, Linkedin, Loader2, ShieldAlert } from 'lucide-react';
 
@@ -27,21 +28,18 @@ export default function WeatherPage() {
     setIsLoading(true);
     setError(null);
     setWeatherData(null); 
-    setSelectedForecastDay(null); // Reset selected day on new location search
+    setSelectedForecastDay(null); 
 
     try {
-      const weatherPromise = getMockWeatherData(loc);
+      // Use the new server action for weather data
+      const weatherPromise = getRealtimeWeatherData(loc);
       const scenePromise = generateWeatherScene({ location: loc } as GenerateWeatherSceneInput);
 
       const [weather, sceneData] = await Promise.allSettled([weatherPromise, scenePromise]);
 
       if (weather.status === 'fulfilled') {
         setWeatherData(weather.value);
-        // By default, select "Today's" forecast data if available (which is the first item)
-        if (weather.value && weather.value.forecast && weather.value.forecast.length > 0) {
-          // No, we want current day's AQI/Hourly by default, not necessarily selecting the first forecast card.
-          // setSelectedForecastDay(weather.value.forecast[0]); 
-        }
+        // No automatic selection of forecast day needed here, current day's details are part of WeatherData
       } else {
         console.error("Weather fetch error:", weather.reason);
         setError("Could not fetch weather data. Please try again.");
@@ -55,12 +53,10 @@ export default function WeatherPage() {
       if (sceneData.status === 'fulfilled' && sceneData.value.imageUri) {
          setAiScene({ imageUri: sceneData.value.imageUri, reliability: sceneData.value.reliability });
       } else {
-        console.error("AI Scene generation error:", sceneData.status === 'rejected' ? sceneData.reason : "No image URI");
-        toast({
-          title: "AI Background",
-          description: "Could not generate a new weather scene. Previous background may remain or default will be used.",
-          variant: "default",
-        });
+        console.warn("AI Scene generation warning:", sceneData.status === 'rejected' ? sceneData.reason : "No image URI returned");
+        // Do not toast for failed AI scene if it's a non-critical background,
+        // especially if it might happen frequently with the new image gen model.
+        // The UI will use a default background.
       }
 
     } catch (err) {
@@ -78,8 +74,9 @@ export default function WeatherPage() {
   }, [toast]);
 
   useEffect(() => {
+    // Fetch for default location on initial load
     fetchWeatherAndScene(DEFAULT_LOCATION);
-  }, [fetchWeatherAndScene]);
+  }, [fetchWeatherAndScene]); // fetchWeatherAndScene is stable due to useCallback
 
 
   const handleSearch = (searchLocation: string) => {
@@ -97,11 +94,11 @@ export default function WeatherPage() {
     setIsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const cityFromCoords = "Current Location (Simulated)"; 
-        const locationString = `coords:${position.coords.latitude},${position.coords.longitude}`;
+        // For real API, you'd use coords. For mock, we simulate a name.
+        // const locationString = `${position.coords.latitude},${position.coords.longitude}`;
+        const cityFromCoords = "Current Location"; // This will be passed to the "dynamic mock"
         setLocation(cityFromCoords); 
         fetchWeatherAndScene(cityFromCoords); 
-        console.log(locationString); 
       },
       (err) => {
         setError(`Geolocation error: ${err.message}`);
@@ -113,7 +110,7 @@ export default function WeatherPage() {
 
   const handleForecastDaySelect = (day: ForecastDayData | null) => {
     if (selectedForecastDay?.date === day?.date) {
-      setSelectedForecastDay(null); // Deselect if clicking the same day again
+      setSelectedForecastDay(null); 
     } else {
       setSelectedForecastDay(day);
     }
